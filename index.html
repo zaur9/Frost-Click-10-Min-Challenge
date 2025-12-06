@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name=".viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Frost Click: 10-Min Challenge</title>
-  <!-- ✅ Web3.js — подключаем ДО всего остального -->
+  <!-- Web3.js -->
   <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
   <style>
     body {
@@ -82,6 +82,21 @@
       z-index: 10;
       display: none;
     }
+    #show-leaderboard {
+      position: absolute;
+      top: 100px;
+      right: 150px;
+      width: 160px;
+      padding: 6px 12px;
+      font-size: 14px;
+      background: #4dffcc;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      z-index: 10;
+      display: none;
+    }
     #game-over {
       position: absolute;
       top: 50%;
@@ -124,6 +139,7 @@
     <div id="timer">10:00</div>
     <button id="connect-wallet">Connect Wallet</button>
     <button id="submit-score">Submit Score</button>
+    <button id="show-leaderboard">Show Top 10</button>
     <div id="game-over">
       <h2 id="result-title">Game Over!</h2>
       <p id="final-score">Your score: 0</p>
@@ -132,11 +148,10 @@
     </div>
   </div>
 
-  <!-- ✅ Весь JavaScript обернут — запускается ТОЛЬКО после загрузки страницы -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-      // ⚠️ ЗАМЕНИ ЭТОТ АДРЕС НА СВОЙ ПОСЛЕ ДЕПЛОЯ!
+      // ⚠️ ЗАМЕНИ НА СВОЙ АДРЕС КОНТРАКТА!
       const CONTRACT_ADDRESS = "0xE3d9AD4B407F7FdF6B6f2528188185686EAeac89";
 
       const game = document.getElementById('game');
@@ -149,8 +164,10 @@
       const restartBtn = document.getElementById('restart');
       const connectWalletBtn = document.getElementById('connect-wallet');
       const submitScoreBtn = document.getElementById('submit-score');
+      const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
       const GAME_DURATION = 10 * 60 * 1000;
+      const SOMNIA_CHAIN_ID = '0xbb8d747f1'; // 50344319817 in hex
 
       let score = 0;
       let gameActive = true;
@@ -170,6 +187,18 @@
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getLeaderboard",
+          "outputs": [{"name": "", "type": "tuple[100]"}],
+          "stateMutability": "view",
+          "type": "function",
+          "components": [
+            {"name": "player", "type": "address"},
+            {"name": "score", "type": "uint256"},
+            {"name": "timestamp", "type": "uint256"}
+          ]
         }
       ];
 
@@ -323,6 +352,7 @@
         timerEl.textContent = '10:00';
         gameOverEl.style.display = 'none';
         submitScoreBtn.style.display = 'none';
+        showLeaderboardBtn.style.display = userAccount ? 'block' : 'none';
         document.getElementById('freeze-overlay')?.remove();
         document.getElementById('freeze-timer')?.remove();
         document.querySelectorAll('.object').forEach(el => el.remove());
@@ -340,14 +370,52 @@
         gameLoopId = requestAnimationFrame(gameLoop);
       }
 
-      // ===== Web3 Wallet Integration =====
+      // ===== Web3 с защитой сети Somnia =====
       async function initWeb3() {
-        if (typeof window.ethereum !== 'undefined') {
-          web3 = new Web3(window.ethereum);
-        } else {
+        if (typeof window.ethereum === 'undefined') {
           alert('Please install MetaMask or Somnia Wallet!');
           return false;
         }
+
+        try {
+          const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+          if (currentChainId !== SOMNIA_CHAIN_ID) {
+            // Пытаемся переключить
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: SOMNIA_CHAIN_ID }]
+            });
+          }
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            // Добавляем сеть
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: SOMNIA_CHAIN_ID,
+                  chainName: 'Somnia Mainnet',
+                  rpcUrls: ['https://rpc.somnia.network'],
+                  nativeCurrency: {
+                    name: 'SOMI',
+                    symbol: 'SOMI',
+                    decimals: 18
+                  },
+                  blockExplorerUrls: ['https://explorer.somnia.network']
+                }]
+              });
+            } catch (addError) {
+              console.error(addError);
+              alert('Failed to add Somnia network. Please add it manually.');
+              return false;
+            }
+          } else {
+            alert('Please switch to Somnia Mainnet in your wallet.');
+            return false;
+          }
+        }
+
+        web3 = new Web3(window.ethereum);
         return true;
       }
 
@@ -359,6 +427,7 @@
           userAccount = accounts[0];
           connectWalletBtn.textContent = userAccount.substring(0, 6) + '...';
           contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+          showLeaderboardBtn.style.display = 'block';
           if (!gameActive) {
             submitScoreBtn.style.display = 'block';
           }
@@ -378,6 +447,11 @@
           return;
         }
         try {
+          const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+          if (currentChainId !== SOMNIA_CHAIN_ID) {
+            alert('Please stay on Somnia Mainnet!');
+            return;
+          }
           await contract.methods.submitScore(score).send({ from: userAccount });
           alert('✅ Score submitted to Somnia Mainnet!');
         } catch (error) {
@@ -386,10 +460,48 @@
         }
       });
 
+      // ===== Лидерборд =====
+      showLeaderboardBtn.addEventListener('click', async () => {
+        if (!contract) {
+          alert('Connect wallet first');
+          return;
+        }
+        try {
+          const leaderboard = await contract.methods.getLeaderboard().call();
+          let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
+          let count = 0;
+          for (let entry of leaderboard) {
+            if (entry.player !== '0x0000000000000000000000000000000000000000' && entry.score > 0) {
+              const shortAddr = entry.player.substring(0, 6) + '...';
+              html += `<li>${shortAddr}: ${entry.score}</li>`;
+              count++;
+              if (count >= 10) break;
+            }
+          }
+          if (count === 0) html += '<li>No scores yet</li>';
+          html += '</ol><button id="close-lb" style="margin-top:10px;padding:5px 10px;">Close</button>';
+
+          const modal = document.createElement('div');
+          modal.id = 'leaderboard-modal';
+          modal.style.cssText = `
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+            background: rgba(10, 20, 50, 0.95); color: white; padding: 20px; border-radius: 10px;
+            z-index: 100; width: 300px; text-align: left;
+          `;
+          modal.innerHTML = html;
+          document.body.appendChild(modal);
+
+          document.getElementById('close-lb').onclick = () => modal.remove();
+        } catch (error) {
+          console.error(error);
+          alert('Failed to load leaderboard');
+        }
+      });
+
       restartBtn.addEventListener('click', startGame);
       startGame();
 
-    }); // <-- Конец DOMContentLoaded
+    });
   </script>
 </body>
 </html>
