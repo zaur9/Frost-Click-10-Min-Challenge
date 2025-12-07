@@ -9,7 +9,7 @@ let gameLoopId = null;
 let startTime = 0;
 let timerInterval = null;
 
-// DOM элементы
+// DOM
 const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
 const timerEl = document.getElementById('timer');
@@ -21,15 +21,17 @@ const restartBtn = document.getElementById('restart');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
-// Геттеры/сеттеры для экспорта
+// Геттеры/сеттеры
 let userAccount = null;
 const setUserAccount = (addr) => { userAccount = addr; };
 const setScore = (val) => { score = val; };
 const setGameActive = (val) => { gameActive = val; };
 
-// Экспорт только необходимых значений (БЕЗ startGame и НЕ через export function)
+// ✅ Экспортируем функцию для получения актуального счёта
+export const getScore = () => score;
+
+// Экспорт остального
 export {
-  score,
   gameActive,
   setScore,
   setGameActive,
@@ -142,7 +144,6 @@ function activateFreeze() {
   }, 1000);
 }
 
-// ❗ ВАЖНО: НЕТ "export" перед "function"
 function endGame(isWin) {
   gameActive = false;
   if (timerInterval) clearInterval(timerInterval);
@@ -181,7 +182,6 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// ❗ НЕ ЭКСПОРТИРУЕТСЯ — используется только внутри
 function startGame() {
   score = 0;
   gameActive = true;
@@ -210,6 +210,5 @@ function startGame() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// Запуск игры при загрузке модуля
 startGame();
 restartBtn.addEventListener('click', startGame);
