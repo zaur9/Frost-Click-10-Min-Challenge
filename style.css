@@ -1,124 +1,272 @@
+/* ------------------------------
+   GLOBAL
+--------------------------------*/
 body {
   margin: 0;
   padding: 0;
-  background: #0c1445;
-  overflow: hidden;
   font-family: 'Arial', sans-serif;
+  background: #030b25;
+  overflow: hidden;
+  color: white;
+
+  /* Frosty gradient background */
+  background: radial-gradient(circle at top,
+    #1a2b6b 0%,
+    #0c1445 40%,
+    #030b25 100%
+  );
 }
+
+/* ❄ Snow Overlay — ultra-light CSS animation */
+body::before {
+  content: "";
+  position: fixed;
+  left: 0; top: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+
+  background-image: url('https://i.imgur.com/JlzJwq0.png'); /* white small snow dots */
+  background-size: 300px 300px;
+  opacity: 0.25;
+
+  animation: snowFall 18s linear infinite;
+}
+
+@keyframes snowFall {
+  from { background-position: 0 0; }
+  to   { background-position: 0 600px; }
+}
+
+/* ------------------------------
+   GAME AREA
+--------------------------------*/
 #game {
   position: relative;
   width: 100vw;
   height: 100vh;
   cursor: pointer;
+  overflow: hidden;
 }
+
+/* ------------------------------
+   OBJECTS (Snowman & Bomb)
+--------------------------------*/
 .object {
   position: absolute;
-  top: -50px;
-  font-size: 28px;
-  user-select: none;
-  text-align: center;
-  width: 50px;
+  top: -60px;
+  width: 55px;
+  height: 55px;
   transform: translateX(-50%);
+  user-select: none;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* Frost glow */
+  filter: drop-shadow(0 0 10px #4dffcc);
+  transition: transform 0.15s ease;
 }
+
+.object:hover {
+  transform: translateX(-50%) scale(1.15);
+}
+
+/* Bomb blinking neon */
 .bomb {
-  animation: blink 0.9s infinite;
+  animation: bombBlink 0.8s infinite;
 }
-@keyframes blink {
-  0%, 45% { opacity: 1; }
-  50%, 95% { opacity: 0.2; }
-  100% { opacity: 1; }
+
+@keyframes bombBlink {
+  0%, 40% { opacity: 1; filter: drop-shadow(0 0 10px #ff4d4d); }
+  50%, 95% { opacity: 0.4; filter: drop-shadow(0 0 4px #ff1a1a); }
+  100% { opacity: 1; filter: drop-shadow(0 0 10px #ff4d4d); }
 }
-#score {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  color: white;
-  font-size: 24px;
-  z-index: 10;
-}
+
+/* ------------------------------
+   HUD (score, timer)
+--------------------------------*/
+#score,
 #timer {
   position: absolute;
+  z-index: 20;
+
+  padding: 8px 15px;
+  border-radius: 10px;
+
+  /* Glass effect */
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(6px);
+
+  font-size: 22px;
+  font-weight: bold;
+}
+
+#score {
+  top: 20px;
+  left: 20px;
+  color: #4dffcc;
+  text-shadow: 0 0 6px #4dffcc;
+}
+
+#timer {
   top: 20px;
   right: 20px;
-  color: #4dffcc;
-  font-size: 20px;
-  z-index: 10;
+  color: #9f4dff;
+  text-shadow: 0 0 6px #9f4dff;
 }
-#connect-wallet {
-  position: absolute;
-  top: 20px;
-  right: 150px;
-  width: 160px;
-  padding: 6px 12px;
-  font-size: 14px;
-  background: #5d5dff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  z-index: 10;
-}
-#submit-score {
-  position: absolute;
-  top: 60px;
-  right: 150px;
-  width: 160px;
-  padding: 6px 12px;
-  font-size: 14px;
-  background: #ff994d;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  z-index: 10;
-  display: none;
-}
+
+/* ------------------------------
+   BUTTONS — GLASS NEON
+--------------------------------*/
+button,
+#connect-wallet,
+#submit-score,
 #show-leaderboard {
   position: absolute;
-  top: 100px;
-  right: 150px;
-  width: 160px;
-  padding: 6px 12px;
-  font-size: 14px;
-  background: #4dffcc;
-  color: #000;
+  z-index: 30;
+
+  width: 165px;
+  padding: 10px 16px;
+  font-size: 15px;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
+
+  color: white;
   cursor: pointer;
-  z-index: 10;
-  display: none;
+  font-weight: bold;
+
+  /* Glass base */
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.25);
+
+  transition: all 0.2s ease;
 }
+
+/* Neon glows per button */
+#connect-wallet {
+  top: 20px;
+  right: 180px;
+  box-shadow: 0 0 10px #5d5dff;
+}
+
+#submit-score {
+  top: 70px;
+  right: 180px;
+  display: none;
+  box-shadow: 0 0 10px #ff994d;
+}
+
+#show-leaderboard {
+  top: 120px;
+  right: 180px;
+  display: none;
+  box-shadow: 0 0 10px #4dffcc;
+}
+
+button:hover,
+#connect-wallet:hover,
+#submit-score:hover,
+#show-leaderboard:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 14px #4dffcc, 0 0 28px rgba(77,255,204,0.5);
+}
+
+/* ------------------------------
+   GAME OVER PANEL — FROST GLASS
+--------------------------------*/
 #game-over {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
+
+  width: 350px;
+
   padding: 30px;
-  border-radius: 15px;
+  border-radius: 20px;
+
   text-align: center;
   display: none;
-  z-index: 20;
+  z-index: 50;
+
+  /* Glassmorphism */
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 20px rgba(77,255,204,0.4);
 }
+
 #game-over h2 {
-  margin-top: 0;
-  color: #ffcc00;
+  margin: 0 0 10px;
+  font-size: 28px;
+  color: #4dffcc;
+  text-shadow: 0 0 8px #4dffcc;
 }
+
 .win h2 {
-  color: #4dffcc !important;
+  color: #9f4dff !important;
+  text-shadow: 0 0 8px #9f4dff !important;
 }
-button {
+
+/* ------------------------------
+   LEADERBOARD MODAL — GLASS NEON
+--------------------------------*/
+#leaderboard-modal {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 320px;
+
+  padding: 25px 20px;
+  z-index: 200;
+
+  /* Frost glass */
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(77,255,204,0.4);
+
+  color: white;
+  animation: leaderboardFade 0.3s ease;
+}
+
+@keyframes leaderboardFade {
+  from { opacity: 0; transform: translateX(-50%) scale(0.92); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+#leaderboard-modal h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #4dffcc;
+  text-shadow: 0 0 6px #4dffcc;
+  font-size: 22px;
+}
+
+#leaderboard-modal ol {
+  padding-left: 20px;
+}
+
+#leaderboard-modal li {
+  margin: 6px 0;
+  font-size: 16px;
+  color: #ffffff;
+  text-shadow: 0 0 4px #9f4dff;
+}
+
+#close-lb {
+  width: 100%;
   margin-top: 15px;
-  padding: 10px 20px;
-  font-size: 18px;
-  background: #4dffb8;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-button:hover {
-  background: #7affd0;
+
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 10px #ff4d4d;
 }
