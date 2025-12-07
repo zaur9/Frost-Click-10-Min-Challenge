@@ -21,20 +21,22 @@ const restartBtn = document.getElementById('restart');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
-// Экспортируем для использования в web3.js
-export {
-  score,
-  gameActive,
-  userAccount as globalUserAccount,
-  setScore, setGameActive, setUserAccount,
-  updateScore, endGame, startGame
-};
-
-// Геттеры/сеттеры
+// Геттеры/сеттеры для экспорта
 let userAccount = null;
 const setUserAccount = (addr) => { userAccount = addr; };
 const setScore = (val) => { score = val; };
 const setGameActive = (val) => { gameActive = val; };
+
+// Экспорт только необходимых значений
+export {
+  score,
+  gameActive,
+  setScore,
+  setGameActive,
+  setUserAccount,
+  updateScore,
+  endGame
+};
 
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
@@ -150,7 +152,7 @@ export function endGame(isWin) {
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
   gameOverEl.className = isWin ? 'win' : '';
   gameOverEl.style.display = 'block';
-  if (userAccount) {
+  if (userAmount) {
     submitScoreBtn.style.display = 'block';
     showLeaderboardBtn.style.display = 'block';
   }
@@ -178,7 +180,8 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-export function startGame() {
+// ❗ startGame НЕ экспортируется — используется только внутри
+function startGame() {
   score = 0;
   gameActive = true;
   isFrozen = false;
