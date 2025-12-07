@@ -167,7 +167,7 @@
       const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
       const GAME_DURATION = 10 * 60 * 1000;
-      const SOMNIA_CHAIN_ID = '0xbb8d747f1'; // 50344319817 in hex
+      const SOMNIA_CHAIN_ID = '0x13af';  // 5031 in hex
 
       let score = 0;
       let gameActive = true;
@@ -395,7 +395,7 @@
                 params: [{
                   chainId: SOMNIA_CHAIN_ID,
                   chainName: 'Somnia Mainnet',
-                  rpcUrls: ['https://rpc.somnia.network'],
+                  rpcUrls: ['https://api.infra.mainnet.somnia.network/'],
                   nativeCurrency: {
                     name: 'SOMI',
                     symbol: 'SOMI',
@@ -505,3 +505,4 @@
   </script>
 </body>
 </html>
+
