@@ -1,164 +1,124 @@
 body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #162060 0%, #0c1445 70%, #050a26 100%);
+  background: #0c1445;
   overflow: hidden;
   font-family: 'Arial', sans-serif;
-  color: white;
 }
-
-/* Игровое поле */
 #game {
   position: relative;
   width: 100vw;
   height: 100vh;
   cursor: pointer;
 }
-
-/* Падающие объекты (эмодзи, как было) */
 .object {
   position: absolute;
   top: -50px;
-  font-size: 32px;
+  font-size: 28px;
   user-select: none;
   text-align: center;
   width: 50px;
   transform: translateX(-50%);
-
-  /* лёгкое неоновое свечение */
-  filter: drop-shadow(0 0 6px rgba(100,255,255,0.7));
-  transition: transform 0.15s ease;
 }
-
-.object:hover {
-  transform: translateX(-50%) scale(1.18);
-}
-
-/* Бомба мигает, как раньше */
 .bomb {
   animation: blink 0.9s infinite;
-  filter: drop-shadow(0 0 6px rgba(255,70,70,0.8));
 }
-
 @keyframes blink {
   0%, 45% { opacity: 1; }
   50%, 95% { opacity: 0.2; }
   100% { opacity: 1; }
 }
-
-/* SCORE */
 #score {
   position: absolute;
   top: 20px;
   left: 20px;
-  color: #4dffcc;
-  font-size: 26px;
+  color: white;
+  font-size: 24px;
   z-index: 10;
-
-  /* лёгкое свечение */
-  text-shadow: 0 0 8px #4dffcc;
 }
-
-/* TIMER */
 #timer {
   position: absolute;
   top: 20px;
   right: 20px;
-  color: #9f4dff;
-  font-size: 22px;
+  color: #4dffcc;
+  font-size: 20px;
   z-index: 10;
-
-  text-shadow: 0 0 8px #9f4dff;
 }
-
-/* Универсальный стиль кнопок */
-button,
-#connect-wallet,
-#submit-score,
-#show-leaderboard {
-  position: absolute;
-  width: 160px;
-  padding: 10px 14px;
-  font-size: 14px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  z-index: 10;
-  font-weight: bold;
-
-  /* Neon Frost */
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  backdrop-filter: blur(4px);
-  color: white;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-button:hover,
-#connect-wallet:hover,
-#submit-score:hover,
-#show-leaderboard:hover {
-  transform: scale(1.06);
-  box-shadow: 0 0 12px rgba(77,255,204,0.8);
-}
-
-/* Индивидуальные цвета кнопок */
 #connect-wallet {
+  position: absolute;
   top: 20px;
   right: 150px;
-  box-shadow: 0 0 6px #5d5dff;
+  width: 160px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #5d5dff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10;
 }
-
 #submit-score {
+  position: absolute;
   top: 60px;
   right: 150px;
+  width: 160px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #ff994d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10;
   display: none;
-  box-shadow: 0 0 6px #ff994d;
 }
-
 #show-leaderboard {
+  position: absolute;
   top: 100px;
   right: 150px;
+  width: 160px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #4dffcc;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10;
   display: none;
-  box-shadow: 0 0 6px #4dffcc;
 }
-
-/* Окно Game Over */
 #game-over {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.75);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
   padding: 30px;
   border-radius: 15px;
   text-align: center;
   display: none;
   z-index: 20;
-
-  box-shadow: 0 0 18px rgba(77,255,204,0.5);
 }
-
 #game-over h2 {
   margin-top: 0;
-  color: #ffd94d;
-  text-shadow: 0 0 6px #ffd94d;
+  color: #ffcc00;
 }
-
-/* Победа */
 .win h2 {
   color: #4dffcc !important;
-  text-shadow: 0 0 6px #4dffcc !important;
 }
-
-/* Кнопки внутри Game Over */
 button {
-  background: rgba(77,255,204,0.3);
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 18px;
+  background: #4dffb8;
   color: #000;
-  box-shadow: 0 0 6px #4dffcc;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
 }
-
 button:hover {
-  background: rgba(77,255,204,0.5);
+  background: #7affd0;
 }
