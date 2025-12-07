@@ -2,9 +2,20 @@ import { CONFIG } from './config.js';
 import {
   score,
   gameActive,
-  setScore, setGameActive, setUserAccount,
-  updateScore, endGame
+  setUserAccount,
+  endGame,
+  // Добавляем getter для userAccount
 } from './game.js';
+
+// 🔹 Создаём глобальную переменную для хранения адреса
+let userAccount = null;
+
+// Обновляем setUserAccount, чтобы он обновлял и локальную переменную
+const originalSetUserAccount = setUserAccount;
+setUserAccount = (addr) => {
+  userAccount = addr;
+  originalSetUserAccount(addr);
+};
 
 // DOM
 const connectWalletBtn = document.getElementById('connect-wallet');
@@ -62,7 +73,7 @@ connectWalletBtn.addEventListener('click', async () => {
   if (!ready) return;
   try {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    setUserAccount(accounts[0]);
+    setUserAccount(accounts[0]); // Теперь userAccount обновляется и здесь, и в game.js
     connectWalletBtn.textContent = accounts[0].substring(0, 6) + '...';
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
     showLeaderboardBtn.style.display = 'block';
@@ -76,7 +87,7 @@ connectWalletBtn.addEventListener('click', async () => {
 });
 
 submitScoreBtn.addEventListener('click', async () => {
-  if (!contract) {
+  if (!contract || !userAccount) {
     alert('Connect wallet first');
     return;
   }
@@ -90,7 +101,8 @@ submitScoreBtn.addEventListener('click', async () => {
       alert('Please stay on Somnia Mainnet (Chain ID: 5031).');
       return;
     }
-    await contract.methods.submitScore(score).send({ from: contract._address ? null : web3.eth.accounts });
+    // ✅ Правильно: указываем from: userAccount
+    await contract.methods.submitScore(score).send({ from: userAccount });
     alert('✅ Score submitted to Somnia Mainnet!');
   } catch (error) {
     console.error(error);
