@@ -1,8 +1,8 @@
 import { CONFIG } from './config.js';
 import {
-  getScore,           // ✅ Получаем через функцию
+  getScore,
   gameActive,
-  setUserAccount,
+  setUserAccount,  // ← просто используем, не переназначаем
   endGame
 } from './game.js';
 
@@ -37,13 +37,6 @@ const contractABI = [
   }
 ];
 
-// Синхронизация адреса
-const originalSetUserAccount = setUserAccount;
-setUserAccount = (addr) => {
-  userAccount = addr;
-  originalSetUserAccount(addr);
-};
-
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
     alert('Please install MetaMask or Somnia Wallet!');
@@ -69,8 +62,9 @@ connectWalletBtn.addEventListener('click', async () => {
   if (!ready) return;
   try {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    setUserAccount(accounts[0]);
-    connectWalletBtn.textContent = accounts[0].substring(0, 6) + '...';
+    userAccount = accounts[0];
+    setUserAccount(userAccount); // ← просто вызываем, не переназначаем
+    connectWalletBtn.textContent = userAccount.substring(0, 6) + '...';
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
     showLeaderboardBtn.style.display = 'block';
     if (!gameActive) {
@@ -88,7 +82,6 @@ submitScoreBtn.addEventListener('click', async () => {
     return;
   }
 
-  // ✅ Получаем АКТУАЛЬНЫЙ счёт прямо сейчас
   const currentScore = getScore();
   if (currentScore <= 0) {
     alert('Score is zero');
@@ -115,7 +108,6 @@ showLeaderboardBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Удаляем старый модал
   const oldModal = document.getElementById('leaderboard-modal');
   if (oldModal) oldModal.remove();
 
@@ -144,7 +136,6 @@ showLeaderboardBtn.addEventListener('click', async () => {
     modal.innerHTML = html;
     document.body.appendChild(modal);
 
-    // Обработчик — после добавления в DOM
     document.getElementById('close-lb').onclick = () => modal.remove();
   } catch (error) {
     console.error(error);
