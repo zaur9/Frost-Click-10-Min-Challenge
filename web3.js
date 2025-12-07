@@ -2,28 +2,19 @@ import { CONFIG } from './config.js';
 import {
   score,
   gameActive,
-  setUserAccount,
-  endGame,
-  // Добавляем getter для userAccount
+  setUserAccount as setGameUserAccount, // переименовываем для ясности
+  endGame
 } from './game.js';
 
-// 🔹 Создаём глобальную переменную для хранения адреса
+// Локальное состояние
 let userAccount = null;
-
-// Обновляем setUserAccount, чтобы он обновлял и локальную переменную
-const originalSetUserAccount = setUserAccount;
-setUserAccount = (addr) => {
-  userAccount = addr;
-  originalSetUserAccount(addr);
-};
+let web3 = null;
+let contract = null;
 
 // DOM
 const connectWalletBtn = document.getElementById('connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
-
-let web3 = null;
-let contract = null;
 
 const contractABI = [
   {
@@ -73,8 +64,9 @@ connectWalletBtn.addEventListener('click', async () => {
   if (!ready) return;
   try {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    setUserAccount(accounts[0]); // Теперь userAccount обновляется и здесь, и в game.js
-    connectWalletBtn.textContent = accounts[0].substring(0, 6) + '...';
+    userAccount = accounts[0]; // сохраняем локально
+    setGameUserAccount(userAccount); // синхронизируем с game.js
+    connectWalletBtn.textContent = userAccount.substring(0, 6) + '...';
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
     showLeaderboardBtn.style.display = 'block';
     if (!gameActive) {
@@ -101,7 +93,6 @@ submitScoreBtn.addEventListener('click', async () => {
       alert('Please stay on Somnia Mainnet (Chain ID: 5031).');
       return;
     }
-    // ✅ Правильно: указываем from: userAccount
     await contract.methods.submitScore(score).send({ from: userAccount });
     alert('✅ Score submitted to Somnia Mainnet!');
   } catch (error) {
