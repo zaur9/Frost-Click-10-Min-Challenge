@@ -17,8 +17,14 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
 const contractABI = [
   {
-    "inputs": [{ "internalType": "uint256", "name": "score", "type": "uint256" }],
-    "name": "submitScore",
+    "inputs": [
+      { "internalType": "uint32", "name": "score_", "type": "uint32" },
+      { "internalType": "uint32", "name": "timestamp_", "type": "uint32" },
+      { "internalType": "uint8", "name": "v", "type": "uint8" },
+      { "internalType": "bytes32", "name": "r", "type": "bytes32" },
+      { "internalType": "bytes32", "name": "s", "type": "bytes32" }
+    ],
+    "name": "submitScoreSigned",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -30,10 +36,10 @@ const contractABI = [
       {
         "components": [
           { "internalType": "address", "name": "player", "type": "address" },
-          { "internalType": "uint256", "name": "score", "type": "uint256" },
-          { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+          { "internalType": "uint32", "name": "score", "type": "uint32" },
+          { "internalType": "uint32", "name": "timestamp", "type": "uint32" }
         ],
-        "internalType": "struct Leaderboard.Entry[100]",
+        "internalType": "struct FrostClickLeaderboard.ScoreEntry[100]",
         "name": "",
         "type": "tuple[100]"
       }
@@ -102,6 +108,7 @@ connectWalletBtn.addEventListener('click', async () => {
   }
 });
 
+// submitScoreBtn handler — заменяем текущий
 submitScoreBtn.addEventListener('click', async () => {
   if (!contract) {
     alert('Connect wallet first');
@@ -115,29 +122,63 @@ submitScoreBtn.addEventListener('click', async () => {
   }
 
   try {
-    const currentChainId = await window.ethereum.request({
-      method: 'eth_chainId'
-    });
+    // ensure account
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    const account = accounts[0];
+    if (!account) {
+      alert('Connect wallet first');
+      return;
+    }
 
+    // chain check
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
     if (currentChainId !== CONFIG.SOMNIA_CHAIN_ID) {
       alert('Please stay on Somnia Mainnet.');
       return;
     }
 
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    const account = accounts[0];
+    // timestamp (seconds)
+    const timestamp = Math.floor(Date.now() / 1000);
 
-    await contract.methods.submitScore(currentScore).send({
-      from: account
+    // Build message hash: keccak256(abi.encodePacked(player, score, timestamp, contractAddress, chainId))
+    // Note: soliditySha3 will produce the same as keccak256(abi.encodePacked(...))
+    const chainIdNum = parseInt(CONFIG.SOMNIA_CHAIN_ID, 16);
+
+    const messageHash = web3.utils.soliditySha3(
+      { t: 'address', v: account },
+      { t: 'uint32', v: currentScore },
+      { t: 'uint32', v: timestamp },
+      { t: 'address', v: CONFIG.CONTRACT_ADDRESS },
+      { t: 'uint256', v: chainIdNum }
+    );
+
+    // Request personal_sign. Some wallets expect params order [msg, account], some [account, msg].
+    // web3.eth.personal.sign handles it; using ethereum.request with 'personal_sign' is OK too.
+    // We'll use ethereum.request for broad compatibility:
+    const signature = await window.ethereum.request({
+      method: 'personal_sign',
+      params: [messageHash, account]
     });
 
-    alert('Score submitted to Somnia Mainnet!');
+    // signature is 65 bytes hex: r(32) + s(32) + v(1)
+    const sig = signature.startsWith('0x') ? signature.slice(2) : signature;
+    const r = '0x' + sig.slice(0, 64);
+    const s = '0x' + sig.slice(64, 128);
+    let v = parseInt(sig.slice(128, 130), 16);
+    // EIP-155 style v fix: if v is 0/1 add 27
+    if (v < 27) v += 27;
 
+    // Send transaction
+    await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
+      .send({ from: account });
+
+    alert('✅ Score submitted (signed)!');
   } catch (error) {
-    console.error(error);
-    alert('Submission failed.');
+    console.error('Signed submission failed:', error);
+    alert('Submission failed. Check console for details.');
   }
 });
+
 
 
 showLeaderboardBtn.addEventListener('click', async () => {
