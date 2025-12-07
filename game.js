@@ -27,7 +27,7 @@ const setUserAccount = (addr) => { userAccount = addr; };
 const setScore = (val) => { score = val; };
 const setGameActive = (val) => { gameActive = val; };
 
-// Экспорт только необходимых значений
+// Экспорт только необходимых значений (БЕЗ startGame и НЕ через export function)
 export {
   score,
   gameActive,
@@ -142,7 +142,8 @@ function activateFreeze() {
   }, 1000);
 }
 
-export function endGame(isWin) {
+// ❗ ВАЖНО: НЕТ "export" перед "function"
+function endGame(isWin) {
   gameActive = false;
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
@@ -152,7 +153,7 @@ export function endGame(isWin) {
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
   gameOverEl.className = isWin ? 'win' : '';
   gameOverEl.style.display = 'block';
-  if (userAmount) {
+  if (userAccount) {
     submitScoreBtn.style.display = 'block';
     showLeaderboardBtn.style.display = 'block';
   }
@@ -180,7 +181,7 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// ❗ startGame НЕ экспортируется — используется только внутри
+// ❗ НЕ ЭКСПОРТИРУЕТСЯ — используется только внутри
 function startGame() {
   score = 0;
   gameActive = true;
@@ -209,6 +210,6 @@ function startGame() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// Запуск игры
+// Запуск игры при загрузке модуля
 startGame();
 restartBtn.addEventListener('click', startGame);
