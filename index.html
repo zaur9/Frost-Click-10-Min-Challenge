@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name=".viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Frost Click: 10-Min Challenge</title>
   <!-- Web3.js -->
   <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
@@ -152,7 +152,7 @@
     document.addEventListener('DOMContentLoaded', () => {
 
       // ⚠️ ЗАМЕНИ НА СВОЙ АДРЕС КОНТРАКТА!
-      const CONTRACT_ADDRESS = "0xE3d9AD4B407F7FdF6B6f2528188185686EAeac89";
+      const CONTRACT_ADDRESS = "0x1234567890123456789012345678901234567890";
 
       const game = document.getElementById('game');
       const scoreEl = document.getElementById('score');
@@ -167,7 +167,6 @@
       const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
       const GAME_DURATION = 10 * 60 * 1000;
-      const SOMNIA_CHAIN_ID = '0x13af';  // 5031 in hex
 
       let score = 0;
       let gameActive = true;
@@ -370,53 +369,31 @@
         gameLoopId = requestAnimationFrame(gameLoop);
       }
 
-      // ===== Web3 с защитой сети Somnia =====
+      // ===== ФИНАЛЬНАЯ ФУНКЦИЯ ПОДКЛЮЧЕНИЯ: только Chain ID 5031, без добавления сети =====
       async function initWeb3() {
         if (typeof window.ethereum === 'undefined') {
           alert('Please install MetaMask or Somnia Wallet!');
           return false;
         }
 
+        const SOMNIA_MAINNET_CHAIN_ID = '0x13a7'; // 5031 in hex
+
         try {
           const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-          if (currentChainId !== SOMNIA_CHAIN_ID) {
-            // Пытаемся переключить
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: SOMNIA_CHAIN_ID }]
-            });
-          }
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            // Добавляем сеть
-            try {
-              await window.ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                  chainId: SOMNIA_CHAIN_ID,
-                  chainName: 'Somnia Mainnet',
-                  rpcUrls: ['https://api.infra.mainnet.somnia.network/'],
-                  nativeCurrency: {
-                    name: 'SOMI',
-                    symbol: 'SOMI',
-                    decimals: 18
-                  },
-                  blockExplorerUrls: ['https://explorer.somnia.network']
-                }]
-              });
-            } catch (addError) {
-              console.error(addError);
-              alert('Failed to add Somnia network. Please add it manually.');
-              return false;
-            }
-          } else {
-            alert('Please switch to Somnia Mainnet in your wallet.');
+
+          if (currentChainId !== SOMNIA_MAINNET_CHAIN_ID) {
+            alert('Please switch your wallet to Somnia Mainnet (Chain ID: 5031).');
             return false;
           }
-        }
 
-        web3 = new Web3(window.ethereum);
-        return true;
+          web3 = new Web3(window.ethereum);
+          return true;
+
+        } catch (error) {
+          console.error('Web3 init failed:', error);
+          alert('Could not connect to wallet.');
+          return false;
+        }
       }
 
       connectWalletBtn.addEventListener('click', async () => {
@@ -448,8 +425,9 @@
         }
         try {
           const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-          if (currentChainId !== SOMNIA_CHAIN_ID) {
-            alert('Please stay on Somnia Mainnet!');
+          const SOMNIA_MAINNET_CHAIN_ID = '0x13a7';
+          if (currentChainId !== SOMNIA_MAINNET_CHAIN_ID) {
+            alert('Please stay on Somnia Mainnet (Chain ID: 5031).');
             return;
           }
           await contract.methods.submitScore(score).send({ from: userAccount });
@@ -490,11 +468,10 @@
           `;
           modal.innerHTML = html;
           document.body.appendChild(modal);
-
           document.getElementById('close-lb').onclick = () => modal.remove();
         } catch (error) {
           console.error(error);
-          alert('Failed to load leaderboard');
+          alert('Failed to load leaderboard. Ensure you are on Somnia Mainnet (Chain ID: 5031).');
         }
       });
 
@@ -505,4 +482,3 @@
   </script>
 </body>
 </html>
-
