@@ -21,24 +21,23 @@ const restartBtn = document.getElementById('restart');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
-// Геттеры/сеттеры
+// userAccount принадлежит игре, не web3.js
 let userAccount = null;
-const setUserAccount = (addr) => { userAccount = addr; };
-const setScore = (val) => { score = val; };
-const setGameActive = (val) => { gameActive = val; };
+export const setUserAccount = addr => { userAccount = addr; };
 
-// ✅ Экспортируем функцию для получения актуального счёта
+// Геттеры
 export const getScore = () => score;
+export const isGameActive = () => gameActive;
 
-// Экспорт остального
+// Экспортируем нужные функции
 export {
-  gameActive,
-  setScore,
-  setGameActive,
-  setUserAccount,
   updateScore,
   endGame
 };
+
+// Вспомогательные функции
+const setGameActive = val => { gameActive = val; };
+const setScore = val => { score = val; };
 
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
@@ -62,14 +61,19 @@ function createObject(emoji, type, speed) {
   objects.push({ el: obj, type, y: -50, speed });
 }
 
+// Основная обработка кликов
 game.addEventListener('click', (e) => {
   if (!gameActive && !isFrozen) return;
+
   const x = e.clientX;
   const y = e.clientY;
+
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
     const rect = obj.el.getBoundingClientRect();
+
     let hit = false;
+
     if (obj.type === 'snow') {
       const hitbox = {
         left: rect.left - 25,
@@ -77,14 +81,21 @@ game.addEventListener('click', (e) => {
         top: rect.top - 25,
         bottom: rect.bottom + 25
       };
-      hit = (x >= hitbox.left && x <= hitbox.right && y >= hitbox.top && y <= hitbox.bottom);
+      hit =
+        x >= hitbox.left && x <= hitbox.right &&
+        y >= hitbox.top && y <= hitbox.bottom;
     } else {
-      hit = (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom);
+      hit =
+        x >= rect.left && x <= rect.right &&
+        y >= rect.top && y <= rect.bottom;
     }
+
     if (hit) {
       const type = obj.type;
+
       obj.el.remove();
       objects.splice(i, 1);
+
       if (isFrozen) {
         if (type === 'snow') score += 1;
         if (type === 'bomb') score += 3;
@@ -93,6 +104,7 @@ game.addEventListener('click', (e) => {
         updateScore();
         return;
       }
+
       if (type === 'bomb') {
         endGame(false);
         return;
@@ -104,6 +116,7 @@ game.addEventListener('click', (e) => {
       } else {
         score += 1;
       }
+
       updateScore();
       return;
     }
@@ -112,7 +125,9 @@ game.addEventListener('click', (e) => {
 
 function activateFreeze() {
   if (isFrozen) return;
+
   isFrozen = true;
+
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
   Object.assign(overlay.style, {
@@ -122,6 +137,7 @@ function activateFreeze() {
     zIndex: '5'
   });
   game.appendChild(overlay);
+
   const freezeTimer = document.createElement('div');
   freezeTimer.id = 'freeze-timer';
   Object.assign(freezeTimer.style, {
@@ -130,9 +146,12 @@ function activateFreeze() {
   });
   freezeTimer.textContent = 'Freeze: 5s';
   game.appendChild(freezeTimer);
+
   let timeLeft = 5;
+
   const countdown = setInterval(() => {
     timeLeft--;
+
     if (timeLeft > 0) {
       freezeTimer.textContent = `Freeze: ${timeLeft}s`;
     } else {
@@ -145,15 +164,22 @@ function activateFreeze() {
 }
 
 function endGame(isWin) {
+  if (!gameActive) return;
+
   gameActive = false;
+
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
+
   const elapsed = Date.now() - startTime;
+
   resultTitle.textContent = isWin ? '🎉 You Survived 10 Minutes! 🎉' : 'Game Over!';
   finalScoreEl.textContent = `Final Score: ${score}`;
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
+
   gameOverEl.className = isWin ? 'win' : '';
   gameOverEl.style.display = 'block';
+
   if (userAccount) {
     submitScoreBtn.style.display = 'block';
     showLeaderboardBtn.style.display = 'block';
@@ -161,45 +187,60 @@ function endGame(isWin) {
 }
 
 function gameLoop() {
-  if (!gameActive && !isFrozen) return;
+  if (!gameActive) return;
+
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
+
     if (!isFrozen) {
       obj.y += obj.speed * 0.016;
       obj.el.style.top = obj.y + 'px';
+
       if (obj.y > window.innerHeight) {
         obj.el.remove();
         objects.splice(i, 1);
       }
     }
   }
+
   if (gameActive) {
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
     if (Math.random() < 0.0025) createObject('🧊', 'ice', 60 + Math.random() * 30);
   }
+
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
+  if (gameLoopId) cancelAnimationFrame(gameLoopId);
+
   score = 0;
   gameActive = true;
   isFrozen = false;
   objects = [];
+
   startTime = Date.now();
+
   updateScore();
   timerEl.textContent = '10:00';
+
   gameOverEl.style.display = 'none';
   submitScoreBtn.style.display = 'none';
   showLeaderboardBtn.style.display = userAccount ? 'block' : 'none';
+
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
+
   document.querySelectorAll('.object').forEach(el => el.remove());
+
   if (timerInterval) clearInterval(timerInterval);
+
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - startTime;
     const remaining = CONFIG.GAME_DURATION - elapsed;
+
     if (remaining <= 0) {
       clearInterval(timerInterval);
       endGame(true);
@@ -207,8 +248,9 @@ function startGame() {
       timerEl.textContent = formatTime(remaining);
     }
   }, 1000);
+
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-startGame();
+window.addEventListener('DOMContentLoaded', startGame);
 restartBtn.addEventListener('click', startGame);
