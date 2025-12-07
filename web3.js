@@ -106,6 +106,11 @@ showLeaderboardBtn.addEventListener('click', async () => {
     alert('Connect wallet first');
     return;
   }
+
+  // Удаляем старый модал, если есть
+  const oldModal = document.getElementById('leaderboard-modal');
+  if (oldModal) oldModal.remove();
+
   try {
     const leaderboard = await contract.methods.getLeaderboard().call();
     let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
@@ -130,6 +135,8 @@ showLeaderboardBtn.addEventListener('click', async () => {
     `;
     modal.innerHTML = html;
     document.body.appendChild(modal);
+
+    // Обязательно назначаем обработчик ПОСЛЕ добавления в DOM
     document.getElementById('close-lb').onclick = () => modal.remove();
   } catch (error) {
     console.error(error);
