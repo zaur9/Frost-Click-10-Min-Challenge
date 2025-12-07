@@ -112,10 +112,21 @@ showLeaderboardBtn.addEventListener('click', async () => {
   if (oldModal) oldModal.remove();
 
   try {
+    showLeaderboardBtn.addEventListener('click', async () => {
+  if (!contract) {
+    alert('Connect wallet first');
+    return;
+  }
+
+  const oldModal = document.getElementById('leaderboard-modal');
+  if (oldModal) oldModal.remove();
+
+  try {
     const leaderboard = await contract.methods.getLeaderboard().call();
     let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
     let count = 0;
     for (let entry of leaderboard) {
+      // Проверяем, что это не нулевой адрес и счёт > 0
       if (entry.player !== '0x0000000000000000000000000000000000000000' && entry.score > 0) {
         const shortAddr = entry.player.substring(0, 6) + '...';
         html += `<li>${shortAddr}: ${entry.score}</li>`;
