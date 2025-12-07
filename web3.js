@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import {
   getScore,
   gameActive,
-  setUserAccount,  // ← просто используем, не переназначаем
+  setUserAccount,
   endGame
 } from './game.js';
 
@@ -10,7 +10,7 @@ let userAccount = null;
 let web3 = null;
 let contract = null;
 
-// DOM
+// DOM elements
 const connectWalletBtn = document.getElementById('connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
@@ -63,7 +63,7 @@ connectWalletBtn.addEventListener('click', async () => {
   try {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     userAccount = accounts[0];
-    setUserAccount(userAccount); // ← просто вызываем, не переназначаем
+    setUserAccount(userAccount);
     connectWalletBtn.textContent = userAccount.substring(0, 6) + '...';
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
     showLeaderboardBtn.style.display = 'block';
@@ -108,26 +108,7 @@ showLeaderboardBtn.addEventListener('click', async () => {
     return;
   }
 
-  const oldModal = document.getElementById('leaderboard-modal');
-  if (oldModal) oldModal.remove();
-
-  try {
-    showLeaderboardBtn.addEventListener('click', async () => {
-  if (!contract) {
-    alert('Connect wallet first');
-    return;
-  }
-
-  const oldModal = document.getElementById('leaderboard-modal');
-  if (oldModal) oldModal.remove();
-
-  try {
-    showLeaderboardBtn.addEventListener('click', async () => {
-  if (!contract) {
-    alert('Connect wallet first');
-    return;
-  }
-
+  // Remove existing modal if present
   const oldModal = document.getElementById('leaderboard-modal');
   if (oldModal) oldModal.remove();
 
@@ -136,7 +117,6 @@ showLeaderboardBtn.addEventListener('click', async () => {
     let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
     let count = 0;
     for (let entry of leaderboard) {
-      // Проверяем, что это не нулевой адрес и счёт > 0
       if (entry.player !== '0x0000000000000000000000000000000000000000' && entry.score > 0) {
         const shortAddr = entry.player.substring(0, 6) + '...';
         html += `<li>${shortAddr}: ${entry.score}</li>`;
@@ -144,7 +124,9 @@ showLeaderboardBtn.addEventListener('click', async () => {
         if (count >= 10) break;
       }
     }
-    if (count === 0) html += '<li>No scores yet</li>';
+    if (count === 0) {
+      html += '<li>No scores yet</li>';
+    }
     html += '</ol><button id="close-lb" style="margin-top:10px;padding:5px 10px;">Close</button>';
 
     const modal = document.createElement('div');
@@ -157,9 +139,12 @@ showLeaderboardBtn.addEventListener('click', async () => {
     modal.innerHTML = html;
     document.body.appendChild(modal);
 
-    document.getElementById('close-lb').onclick = () => modal.remove();
+    // Assign close handler after DOM insertion
+    document.getElementById('close-lb').onclick = () => {
+      modal.remove();
+    };
   } catch (error) {
-    console.error(error);
-    alert('Failed to load leaderboard.');
+    console.error('Leaderboard error:', error);
+    alert('Failed to load leaderboard. Ensure you are on Somnia Mainnet (Chain ID: 5031).');
   }
 });
