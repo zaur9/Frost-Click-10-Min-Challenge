@@ -122,6 +122,16 @@ showLeaderboardBtn.addEventListener('click', async () => {
   if (oldModal) oldModal.remove();
 
   try {
+    showLeaderboardBtn.addEventListener('click', async () => {
+  if (!contract) {
+    alert('Connect wallet first');
+    return;
+  }
+
+  const oldModal = document.getElementById('leaderboard-modal');
+  if (oldModal) oldModal.remove();
+
+  try {
     const leaderboard = await contract.methods.getLeaderboard().call();
     let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
     let count = 0;
