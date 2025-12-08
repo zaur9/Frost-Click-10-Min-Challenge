@@ -108,7 +108,7 @@ connectWalletBtn.addEventListener('click', async () => {
   }
 });
 
-// submitScoreBtn handler — заменяем текущий
+// submitScoreBtn handler — заменён
 submitScoreBtn.addEventListener('click', async () => {
   if (!contract) {
     alert('Connect wallet first');
@@ -137,11 +137,39 @@ submitScoreBtn.addEventListener('click', async () => {
       return;
     }
 
+    // ---------------------------------------------------------------------
+    // ✅ PRE-CHECK: leaderboard check BEFORE signing transaction
+    // ---------------------------------------------------------------------
+    try {
+      const leaderboard = await contract.methods.getLeaderboard().call();
+
+      // find lowest valid score
+      let lowestScore = null;
+      let filledSlots = 0;
+
+      for (const entry of leaderboard) {
+        if (entry.player !== "0x0000000000000000000000000000000000000000") {
+          filledSlots++;
+          const sc = Number(entry.score);
+          if (lowestScore === null || sc < lowestScore) {
+            lowestScore = sc;
+          }
+        }
+      }
+
+      // leaderboard full → check if score is high enough
+      if (filledSlots >= 100 && lowestScore !== null && currentScore <= lowestScore) {
+        alert("Your score is not high enough to enter the leaderboard. Try again!");
+        return; // STOP — no signing, no transaction
+      }
+    } catch (err) {
+      console.error("Leaderboard pre-check failed:", err);
+    }
+    // ---------------------------------------------------------------------
+
     // timestamp (seconds)
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // Build message hash: keccak256(abi.encodePacked(player, score, timestamp, contractAddress, chainId))
-    // Note: soliditySha3 will produce the same as keccak256(abi.encodePacked(...))
     const chainIdNum = parseInt(CONFIG.SOMNIA_CHAIN_ID, 16);
 
     const messageHash = web3.utils.soliditySha3(
@@ -152,34 +180,27 @@ submitScoreBtn.addEventListener('click', async () => {
       { t: 'uint256', v: chainIdNum }
     );
 
-    // Request personal_sign. Some wallets expect params order [msg, account], some [account, msg].
-    // web3.eth.personal.sign handles it; using ethereum.request with 'personal_sign' is OK too.
-    // We'll use ethereum.request for broad compatibility:
     const signature = await window.ethereum.request({
       method: 'personal_sign',
       params: [messageHash, account]
     });
 
-    // signature is 65 bytes hex: r(32) + s(32) + v(1)
     const sig = signature.startsWith('0x') ? signature.slice(2) : signature;
     const r = '0x' + sig.slice(0, 64);
     const s = '0x' + sig.slice(64, 128);
     let v = parseInt(sig.slice(128, 130), 16);
-    // EIP-155 style v fix: if v is 0/1 add 27
     if (v < 27) v += 27;
 
-    // Send transaction
     await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
       .send({ from: account });
 
     alert('✅ Score submitted (signed)!');
+
   } catch (error) {
     console.error('Signed submission failed:', error);
     alert('Submission failed. Check console for details.');
   }
 });
-
-
 
 showLeaderboardBtn.addEventListener('click', async () => {
   if (!contract) {
