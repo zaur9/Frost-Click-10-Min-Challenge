@@ -140,31 +140,36 @@ submitScoreBtn.addEventListener('click', async () => {
     // ---------------------------------------------------------------------
     // ✅ PRE-CHECK: leaderboard check BEFORE signing transaction
     // ---------------------------------------------------------------------
-    try {
-      const leaderboard = await contract.methods.getLeaderboard().call();
+try {
+    const leaderboard = await contract.methods.getLeaderboard().call();
 
-      // find lowest valid score
-      let lowestScore = null;
-      let filledSlots = 0;
+    let filledSlots = 0;
+    let lowestScore = null;
 
-      for (const entry of leaderboard) {
+    // Count real entries and detect lowest score
+    for (const entry of leaderboard) {
         if (entry.player !== "0x0000000000000000000000000000000000000000") {
-          filledSlots++;
-          const sc = Number(entry.score);
-          if (lowestScore === null || sc < lowestScore) {
-            lowestScore = sc;
-          }
-        }
-      }
+            filledSlots++;
 
-      // leaderboard full → check if score is high enough
-      if (filledSlots >= 100 && lowestScore !== null && currentScore <= lowestScore) {
-        alert("Your score is not high enough to enter the leaderboard. Try again!");
-        return; // STOP — no signing, no transaction
-      }
-    } catch (err) {
-      console.error("Leaderboard pre-check failed:", err);
+            const sc = Number(entry.score);
+            if (lowestScore === null || sc < lowestScore) {
+                lowestScore = sc;
+            }
+        }
     }
+
+    // If leaderboard full → score must be strictly higher than lowest
+    if (filledSlots >= 100) {
+        if (currentScore <= lowestScore) {
+            alert("Your score is not high enough to enter the leaderboard. Try again!");
+            return; // STOP — do NOT sign and do NOT send TX
+        }
+    }
+
+} catch (err) {
+    console.error("Leaderboard pre-check failed:", err);
+}
+
     // ---------------------------------------------------------------------
 
     // timestamp (seconds)
