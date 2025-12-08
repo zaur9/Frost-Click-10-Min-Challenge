@@ -1,3 +1,6 @@
+/* ===========================
+   GLOBAL BACKGROUND
+=========================== */
 body {
   margin: 0;
   padding: 0;
@@ -7,7 +10,9 @@ body {
   color: white;
 }
 
-/* Игровое поле */
+/* ===========================
+   GAME AREA
+=========================== */
 #game {
   position: relative;
   width: 100vw;
@@ -15,7 +20,9 @@ body {
   cursor: pointer;
 }
 
-/* Падающие объекты (эмодзи, как было) */
+/* ===========================
+   BASE OBJECT STYLE
+=========================== */
 .object {
   position: absolute;
   top: -50px;
@@ -23,21 +30,53 @@ body {
   user-select: none;
   text-align: center;
   width: 50px;
-  transform: translateX(-50%);
 
-  /* лёгкое неоновое свечение */
-  filter: drop-shadow(0 0 6px rgba(100,255,255,0.7));
-  transition: transform 0.15s ease;
+  /* Default states — NO GLOW */
+  filter: none !important;
+  text-shadow: none !important;
+  transform: translateX(-50%);
+  transition: transform 0.10s linear;
 }
 
 .object:hover {
   transform: translateX(-50%) scale(1.18);
 }
 
-/* Бомба мигает, как раньше */
+/* ===========================
+   OBJECT TYPES (SNOW / BOMB / ICE / GIFT)
+=========================== */
+
+/* ❄️ Snow — NO glow, BUT HAS neon tail */
+.object.snow {
+  color: #aeeaff;
+  filter: none !important;
+}
+
+.object.snow::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 40px;
+  left: 50%;
+  top: 60%;
+  transform: translateX(-50%);
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 255, 255, 0.7),
+    rgba(0, 255, 255, 0)
+  );
+
+  filter: blur(6px);
+  opacity: 0.8;
+}
+
+/* 💣 Bomb — RED glow + blinking */
 .bomb {
   animation: blink 0.9s infinite;
-  filter: drop-shadow(0 0 6px rgba(255,70,70,0.8));
+  filter: drop-shadow(0 0 7px rgba(255, 0, 0, 0.9))
+          drop-shadow(0 0 12px rgba(255, 0, 0, 0.6));
 }
 
 @keyframes blink {
@@ -46,7 +85,21 @@ body {
   100% { opacity: 1; }
 }
 
-/* SCORE */
+/* 🧊 Ice — NO glow */
+.object.ice {
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* 🎁 Gift — neutral (can add glow later) */
+.object.gift {
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* ===========================
+   SCORE DISPLAY
+=========================== */
 #score {
   position: absolute;
   top: 20px;
@@ -55,11 +108,12 @@ body {
   font-size: 26px;
   z-index: 10;
 
-  /* лёгкое свечение */
   text-shadow: 0 0 8px #4dffcc;
 }
 
-/* TIMER */
+/* ===========================
+   TIMER DISPLAY
+=========================== */
 #timer {
   position: absolute;
   top: 20px;
@@ -71,7 +125,9 @@ body {
   text-shadow: 0 0 8px #9f4dff;
 }
 
-/* Универсальный стиль кнопок */
+/* ===========================
+   BUTTON BASE STYLE
+=========================== */
 button,
 #connect-wallet,
 #submit-score,
@@ -86,7 +142,6 @@ button,
   z-index: 10;
   font-weight: bold;
 
-  /* Neon Frost */
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.2);
   backdrop-filter: blur(4px);
@@ -102,7 +157,9 @@ button:hover,
   box-shadow: 0 0 12px rgba(77,255,204,0.8);
 }
 
-/* Индивидуальные цвета кнопок */
+/* ===========================
+   BUTTON POSITIONS
+=========================== */
 #connect-wallet {
   top: 20px;
   right: 150px;
@@ -123,7 +180,9 @@ button:hover,
   box-shadow: 0 0 6px #4dffcc;
 }
 
-/* Окно Game Over */
+/* ===========================
+   GAME OVER WINDOW
+=========================== */
 #game-over {
   position: absolute;
   top: 50%;
@@ -146,13 +205,12 @@ button:hover,
   text-shadow: 0 0 6px #ffd94d;
 }
 
-/* Победа */
 .win h2 {
   color: #4dffcc !important;
   text-shadow: 0 0 6px #4dffcc !important;
 }
 
-/* Кнопки внутри Game Over */
+/* Buttons inside Game Over */
 button {
   background: rgba(77,255,204,0.3);
   color: #000;
@@ -162,7 +220,10 @@ button {
 button:hover {
   background: rgba(77,255,204,0.5);
 }
-/* ===== Glass Leaderboard ===== */
+
+/* ===========================
+   LEADERBOARD — GLASS
+=========================== */
 #leaderboard-modal {
   position: fixed;
   top: 50%;
@@ -173,8 +234,8 @@ button:hover {
   color: white;
   border-radius: 14px;
   z-index: 200;
-  
-  background: rgba(10, 20, 50, 0.45);
+
+  background: rgba(10,20,50,0.45);
   backdrop-filter: blur(14px);
   box-shadow: 0 0 25px rgba(77,255,204,0.25);
   border: 1px solid rgba(255,255,255,0.08);
@@ -235,30 +296,10 @@ button:hover {
   background: rgba(77,255,204,0.45);
   box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
-/* ===== Snowfall Background ===== */
 
-.snowflake {
-  position: fixed;
-  top: -10px;
-  color: #aeeaff;
-  font-size: 10px;
-  opacity: 0.8;
-  pointer-events: none;
-  animation-name: fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  z-index: 0; /* behind everything */
-}
-
-@keyframes fall {
-  0% {
-    transform: translateY(-10px) translateX(0);
-  }
-  100% {
-    transform: translateY(110vh) translateX(20px);
-  }
-}
-/* ===== Neon Click Flash ===== */
+/* ===========================
+   CLICK FLASH
+=========================== */
 .neon-flash {
   position: absolute;
   width: 40px;
@@ -271,30 +312,6 @@ button:hover {
 }
 
 @keyframes neon-flash-anim {
-  0% {
-    transform: scale(0.3);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-/* ===== Neon Trail ===== */
-.object {
-  filter: drop-shadow(0 0 6px #4dfffc) drop-shadow(0 0 12px #4dfffc);
-  transition: transform 0.1s linear;
-}
-.object::after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  left: 0;
-  top: 0;
-  background: currentColor;
-  opacity: 0.12;
-  filter: blur(6px);
-  transform: scale(1.3);
-  transition: opacity 0.15s;
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
