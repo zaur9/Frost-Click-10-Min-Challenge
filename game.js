@@ -96,6 +96,16 @@ game.addEventListener('click', (e) => {
       obj.el.remove();
       objects.splice(i, 1);
 
+      const flash = document.createElement("div");
+  flash.className = "neon-flash";
+
+  const rect2 = rect;
+  flash.style.left = (rect2.left + rect2.width / 2 - 20) + "px";
+  flash.style.top = (rect2.top + rect2.height / 2 - 20) + "px";
+
+  document.getElementById("game").appendChild(flash);
+  setTimeout(() => flash.remove(), 250);
+      
       if (isFrozen) {
         if (type === 'snow') score += 1;
         if (type === 'bomb') score += 3;
