@@ -21,56 +21,56 @@ const restartBtn = document.getElementById('restart');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
-// userAccount принадлежит игре, не web3.js
+// userAccount
 let userAccount = null;
 export const setUserAccount = addr => { userAccount = addr; };
 
-// Геттеры
+// GETTERS
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
 
-// Экспортируем нужные функции
-export {
-  updateScore,
-  endGame
-};
+export { updateScore, endGame };
 
-// Вспомогательные функции
-const setGameActive = val => { gameActive = val; };
-const setScore = val => { score = val; };
+// Helpers
+const setGameActive = v => gameActive = v;
+const setScore = v => score = v;
 
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
 }
 
 function formatTime(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
 // ------------------------------
-// CREATE OBJECT — изменено: y через transform
+// CREATE OBJECT (fixed)
 // ------------------------------
 function createObject(emoji, type, speed) {
   if (!gameActive) return;
 
   const obj = document.createElement('div');
   obj.className = 'object';
+  obj.classList.add(type);        // <---- ВАЖНО (snow / bomb / gift / ice)
+
   if (type === 'bomb') obj.classList.add('bomb');
+
   obj.textContent = emoji;
 
-  obj.style.left = Math.random() * (window.innerWidth - 50) + 'px';
-  obj.style.transform = `translateY(-50px)`;  // <-- вместо top
+  const posX = Math.random() * (window.innerWidth - 50);
+  obj.style.left = posX + 'px';
+  obj.style.transform = `translateX(-50%) translateY(-50px)`;  // Correct
 
   game.appendChild(obj);
 
-  objects.push({ el: obj, type, y: -50, speed });
+  objects.push({ el: obj, type, y: -50, speed, x: posX });
 }
 
 // ------------------------------
-// КЛИКИ
+// CLICK HANDLER
 // ------------------------------
 game.addEventListener('click', (e) => {
   if (!gameActive && !isFrozen) return;
@@ -109,11 +109,9 @@ game.addEventListener('click', (e) => {
       // neon flash
       const flash = document.createElement("div");
       flash.className = "neon-flash";
-
       flash.style.left = (rect.left + rect.width / 2 - 20) + "px";
       flash.style.top = (rect.top + rect.height / 2 - 20) + "px";
-
-      document.getElementById("game").appendChild(flash);
+      game.appendChild(flash);
       setTimeout(() => flash.remove(), 250);
 
       if (isFrozen) {
@@ -128,7 +126,8 @@ game.addEventListener('click', (e) => {
       if (type === 'bomb') {
         endGame(false);
         return;
-      } else if (type === 'ice') {
+      }
+      if (type === 'ice') {
         activateFreeze();
         score += 2;
       } else if (type === 'gift') {
@@ -143,6 +142,9 @@ game.addEventListener('click', (e) => {
   }
 });
 
+// ------------------------------
+// FREEZE MODE
+// ------------------------------
 function activateFreeze() {
   if (isFrozen) return;
 
@@ -151,10 +153,10 @@ function activateFreeze() {
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
   Object.assign(overlay.style, {
-    position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
-    background: 'rgba(200, 240, 255, 0.3)',
-    pointerEvents: 'none',
-    zIndex: '5'
+    position: 'absolute', top: '0', left: '0',
+    width: '100%', height: '100%',
+    background: 'rgba(200,240,255,0.3)',
+    pointerEvents: 'none', zIndex: '5'
   });
   game.appendChild(overlay);
 
@@ -168,7 +170,6 @@ function activateFreeze() {
   game.appendChild(freezeTimer);
 
   let timeLeft = 5;
-
   const countdown = setInterval(() => {
     timeLeft--;
 
@@ -183,6 +184,9 @@ function activateFreeze() {
   }, 1000);
 }
 
+// ------------------------------
+// END GAME
+// ------------------------------
 function endGame(isWin) {
   if (!gameActive) return;
 
@@ -207,7 +211,7 @@ function endGame(isWin) {
 }
 
 // ------------------------------
-// GAME LOOP — главный блок
+// MAIN GAME LOOP
 // ------------------------------
 function gameLoop() {
   if (!gameActive) return;
@@ -218,8 +222,8 @@ function gameLoop() {
     if (!isFrozen) {
       obj.y += obj.speed * 0.016;
 
-      // NEW: GPU-friendly transform
-      obj.el.style.transform = `translateY(${obj.y}px)`;
+      // IMPORTANT: keep X centering
+      obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
       if (obj.y > window.innerHeight) {
         obj.el.remove();
@@ -238,6 +242,9 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
+// ------------------------------
+// START GAME
+// ------------------------------
 function startGame() {
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
 
@@ -257,20 +264,19 @@ function startGame() {
 
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
-
   document.querySelectorAll('.object').forEach(el => el.remove());
 
   if (timerInterval) clearInterval(timerInterval);
 
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - startTime;
-    const remaining = CONFIG.GAME_DURATION - elapsed;
+    const rem = CONFIG.GAME_DURATION - elapsed;
 
-    if (remaining <= 0) {
+    if (rem <= 0) {
       clearInterval(timerInterval);
       endGame(true);
     } else {
-      timerEl.textContent = formatTime(remaining);
+      timerEl.textContent = formatTime(rem);
     }
   }, 1000);
 
