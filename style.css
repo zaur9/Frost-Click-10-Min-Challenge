@@ -235,3 +235,26 @@ button:hover {
   background: rgba(77,255,204,0.45);
   box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
+/* ===== Snowfall Background ===== */
+
+.snowflake {
+  position: fixed;
+  top: -10px;
+  color: #aeeaff;
+  font-size: 10px;
+  opacity: 0.8;
+  pointer-events: none;
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  z-index: 0; /* behind everything */
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(-10px) translateX(0);
+  }
+  100% {
+    transform: translateY(110vh) translateX(20px);
+  }
+}
