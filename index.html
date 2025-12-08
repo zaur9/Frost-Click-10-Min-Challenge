@@ -28,5 +28,31 @@
   <script type="module" src="config.js"></script>
   <script type="module" src="web3.js"></script>
   <script type="module" src="game.js"></script>
+  <script>
+  // Create subtle snowfall
+  function createSnow() {
+    const snow = document.createElement("div");
+    snow.classList.add("snowflake");
+    snow.textContent = "•"; // tiny dot (perfect for light neon snow)
+
+    // random horizontal start
+    snow.style.left = Math.random() * 100 + "vw";
+
+    // random size
+    snow.style.fontSize = (8 + Math.random() * 8) + "px";
+
+    // random duration
+    snow.style.animationDuration = (6 + Math.random() * 8) + "s";
+
+    document.body.appendChild(snow);
+
+    // remove when off-screen
+    setTimeout(() => snow.remove(), 15000);
+  }
+
+  // generate snow continuously
+  setInterval(createSnow, 220);
+</script>
 </body>
 </html>
+
