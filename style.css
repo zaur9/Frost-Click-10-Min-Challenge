@@ -258,3 +258,25 @@ button:hover {
     transform: translateY(110vh) translateX(20px);
   }
 }
+/* ===== Neon Click Flash ===== */
+.neon-flash {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,255,255,0.9), rgba(0,255,255,0) 70%);
+  pointer-events: none;
+  animation: neon-flash-anim 0.25s ease-out forwards;
+  z-index: 5;
+}
+
+@keyframes neon-flash-anim {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
