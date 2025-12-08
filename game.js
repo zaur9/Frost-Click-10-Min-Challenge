@@ -50,18 +50,28 @@ function formatTime(ms) {
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
+// ------------------------------
+// CREATE OBJECT — изменено: y через transform
+// ------------------------------
 function createObject(emoji, type, speed) {
   if (!gameActive) return;
+
   const obj = document.createElement('div');
   obj.className = 'object';
   if (type === 'bomb') obj.classList.add('bomb');
   obj.textContent = emoji;
+
   obj.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+  obj.style.transform = `translateY(-50px)`;  // <-- вместо top
+
   game.appendChild(obj);
+
   objects.push({ el: obj, type, y: -50, speed });
 }
 
-// Основная обработка кликов
+// ------------------------------
+// КЛИКИ
+// ------------------------------
 game.addEventListener('click', (e) => {
   if (!gameActive && !isFrozen) return;
 
@@ -96,16 +106,16 @@ game.addEventListener('click', (e) => {
       obj.el.remove();
       objects.splice(i, 1);
 
+      // neon flash
       const flash = document.createElement("div");
-  flash.className = "neon-flash";
+      flash.className = "neon-flash";
 
-  const rect2 = rect;
-  flash.style.left = (rect2.left + rect2.width / 2 - 20) + "px";
-  flash.style.top = (rect2.top + rect2.height / 2 - 20) + "px";
+      flash.style.left = (rect.left + rect.width / 2 - 20) + "px";
+      flash.style.top = (rect.top + rect.height / 2 - 20) + "px";
 
-  document.getElementById("game").appendChild(flash);
-  setTimeout(() => flash.remove(), 250);
-      
+      document.getElementById("game").appendChild(flash);
+      setTimeout(() => flash.remove(), 250);
+
       if (isFrozen) {
         if (type === 'snow') score += 1;
         if (type === 'bomb') score += 3;
@@ -196,6 +206,9 @@ function endGame(isWin) {
   }
 }
 
+// ------------------------------
+// GAME LOOP — главный блок
+// ------------------------------
 function gameLoop() {
   if (!gameActive) return;
 
@@ -204,7 +217,9 @@ function gameLoop() {
 
     if (!isFrozen) {
       obj.y += obj.speed * 0.016;
-      obj.el.style.top = obj.y + 'px';
+
+      // NEW: GPU-friendly transform
+      obj.el.style.transform = `translateY(${obj.y}px)`;
 
       if (obj.y > window.innerHeight) {
         obj.el.remove();
