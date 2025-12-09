@@ -161,19 +161,10 @@ submitScoreBtn.addEventListener('click', async () => {
     });
 
     // signature is 65 bytes hex: r(32) + s(32) + v(1)
-    if (!signature || signature.length < 130) {
-      throw new Error('Invalid signature format');
-    }
-    
     const sig = signature.startsWith('0x') ? signature.slice(2) : signature;
-    if (sig.length < 130) {
-      throw new Error('Signature too short');
-    }
-    
     const r = '0x' + sig.slice(0, 64);
     const s = '0x' + sig.slice(64, 128);
     let v = parseInt(sig.slice(128, 130), 16);
-    
     // EIP-155 style v fix: if v is 0/1 add 27
     if (v < 27) v += 27;
 
@@ -247,3 +238,5 @@ showLeaderboardBtn.addEventListener('click', async () => {
   } catch (error) {
     console.error('Leaderboard error:', error);
     alert('Failed to load leaderboard.');
+  }
+});
