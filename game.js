@@ -2,13 +2,14 @@ import { CONFIG } from './config.js';
 
 // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
 let score = 0;
-let gameActive = false;     // теперь игра НЕ активна с самого старта
+let gameActive = false;
 let isFrozen = false;
 let isPaused = false;
 let objects = [];
 let gameLoopId = null;
 let startTime = 0;
 let timerInterval = null;
+let lastSpawnTime = 0;
 
 // === DOM ЭЛЕМЕНТЫ ===
 const game = document.getElementById('game');
@@ -25,24 +26,18 @@ const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 
-// === userAccount привязан к игре ===
+// === userAccount ===
 let userAccount = null;
 export const setUserAccount = addr => { userAccount = addr; };
-
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
-
-// Экспортируем функции
-export { updateScore, endGame };
-
 
 // === ОБНОВЛЕНИЕ СЧЁТА ===
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
 }
 
-
-// === ВРЕМЯ ===
+// === ФОРМАТ ВРЕМЕНИ ===
 function formatTime(ms) {
   const totalSec = Math.floor(ms / 1000);
   const min = Math.floor(totalSec / 60);
@@ -50,48 +45,45 @@ function formatTime(ms) {
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
-
 // === СОЗДАНИЕ ОБЪЕКТОВ ===
 function createObject(emoji, type, speed) {
-  if (!gameActive || isPaused) return;
+  if (!gameActive || isPaused || isFrozen) return;
 
   const obj = document.createElement('div');
   obj.className = 'object';
   if (type === 'bomb') obj.classList.add('bomb');
+  if (type === 'ice') obj.classList.add('ice');
+  if (type === 'gift') obj.classList.add('gift');
   obj.textContent = emoji;
 
-  obj.style.left = Math.random() * (window.innerWidth - 50) + 'px';
-  obj.style.transform = `translateX(-50%) translateY(-50px)`;
+  obj.style.left = Math.random() * (window.innerWidth - 60) + 30 + 'px';
+  obj.style.top = '-60px';
 
   game.appendChild(obj);
 
-  objects.push({ el: obj, type, y: -50, speed });
+  objects.push({ el: obj, type, y: -60, speed, clicked: false });
 }
-
 
 // === КЛИК ПО ОБЪЕКТАМ ===
 game.addEventListener('click', (e) => {
-  if (!gameActive || isPaused) return;
+  if (!gameActive || isPaused || isFrozen) return;
 
   const x = e.clientX;
   const y = e.clientY;
 
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
+    if (obj.clicked) continue;
+
     const rect = obj.el.getBoundingClientRect();
-
-    const hit =
-      x >= rect.left && x <= rect.right &&
-      y >= rect.top && y <= rect.bottom;
-
+    const hit = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     if (!hit) continue;
 
-    const type = obj.type;
-
+    obj.clicked = true;
     obj.el.remove();
     objects.splice(i, 1);
 
-    // FLASH эффект
+    // Flash эффект
     const flash = document.createElement("div");
     flash.className = "neon-flash";
     flash.style.left = (rect.left + rect.width / 2 - 20) + "px";
@@ -99,28 +91,19 @@ game.addEventListener('click', (e) => {
     game.appendChild(flash);
     setTimeout(() => flash.remove(), 250);
 
-    // ЛОГИКА НАЖАТИЯ
-    if (isFrozen) {
-      if (type === 'snow') score += 1;
-      if (type === 'bomb') score += 3;
-      if (type === 'gift') score += 5;
-      if (type === 'ice') score += 2;
-      updateScore();
-      return;
-    }
-
-    if (type === 'bomb') {
+    // Логика
+    if (obj.type === 'bomb') {
       endGame(false);
       return;
     }
 
-    if (type === 'ice') {
+    if (obj.type === 'ice') {
       activateFreeze();
       score += 2;
-    } else if (type === 'gift') {
+    } else if (obj.type === 'gift') {
       score += 5;
     } else {
-      score += 1;
+      score += (isFrozen ? (obj.type === 'bomb' ? 3 : 1) : 1);
     }
 
     updateScore();
@@ -128,60 +111,45 @@ game.addEventListener('click', (e) => {
   }
 });
 
-
 // === ЗАМОРОЗКА ===
 function activateFreeze() {
   if (isFrozen) return;
-
   isFrozen = true;
 
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
-  Object.assign(overlay.style, {
-    position: 'absolute', top: '0', left: '0',
-    width: '100%', height: '100%',
-    background: 'rgba(200, 240, 255, 0.3)',
-    pointerEvents: 'none',
-    zIndex: '5'
-  });
+  overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(200,240,255,0.3);pointer-events:none;z-index:5;';
   game.appendChild(overlay);
 
-  const freezeTimer = document.createElement('div');
-  freezeTimer.id = 'freeze-timer';
-  Object.assign(freezeTimer.style, {
-    position: 'absolute', top: '50px', right: '20px',
-    color: '#a0e0ff', fontSize: '20px', zIndex: '10'
-  });
-  freezeTimer.textContent = 'Freeze: 5s';
-  game.appendChild(freezeTimer);
+  const timer = document.createElement('div');
+  timer.id = 'freeze-timer';
+  timer.style.cssText = 'position:absolute;top:50px;right:20px;color:#a0e0ff;font-size:20px;z-index:10;';
+  timer.textContent = 'Freeze: 5s';
+  game.appendChild(timer);
 
-  let timeLeft = 5;
-
-  const countdown = setInterval(() => {
-    timeLeft--;
-
-    if (timeLeft > 0) {
-      freezeTimer.textContent = `Freeze: ${timeLeft}s`;
+  let time = 5;
+  const id = setInterval(() => {
+    time--;
+    if (time > 0) {
+      timer.textContent = `Freeze: ${time}s`;
     } else {
-      clearInterval(countdown);
-      freezeTimer.remove();
+      clearInterval(id);
+      timer.remove();
       overlay.remove();
       isFrozen = false;
     }
   }, 1000);
 }
 
-
 // === КОНЕЦ ИГРЫ ===
 function endGame(isWin) {
   gameActive = false;
-
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
 
   const elapsed = Date.now() - startTime;
 
-  resultTitle.textContent = isWin ? '🎉 You Survived 10 Minutes! 🎉' : 'Game Over!';
+  resultTitle.textContent = isWin ? 'You Survived 10 Minutes!' : 'Game Over!';
   finalScoreEl.textContent = `Final Score: ${score}`;
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
 
@@ -192,111 +160,100 @@ function endGame(isWin) {
   showLeaderboardBtn.style.display = userAccount ? 'block' : 'none';
 }
 
-
-// === ГЛАВНЫЙ GAME LOOP ===
-function gameLoop() {
+// === GAME LOOP (FPS-independent spawn) ===
+function gameLoop(timestamp) {
   if (!gameActive || isPaused) return;
 
-  for (let i = objects.length - 1; i >= 0; i--) {
-    const obj = objects[i];
+  if (!lastSpawnTime) lastSpawnTime = timestamp;
+  const delta = timestamp - lastSpawnTime;
 
-    if (!isFrozen) {
-      obj.y += obj.speed * 0.016;
-      obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
+  if (!isFrozen) {
+    objects.forEach(obj => {
+      obj.y += obj.speed * (delta / 1000) * 60;
+      obj.el.style.top = obj.y + 'px';
 
-      if (obj.y > window.innerHeight) {
+      if (obj.y > window.innerHeight + 50) {
         obj.el.remove();
-        objects.splice(i, 1);
+        objects = objects.filter(o => o !== obj);
       }
-    }
+    });
   }
 
-  // Спавн — только если нет паузы и нет заморозки
-  if (!isPaused && !isFrozen) {
-    if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
-    if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
-    if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
-    if (Math.random() < 0.0025) createObject('🧊', 'ice', 60 + Math.random() * 30);
+  // Спавн ~30 раз в секунду
+  if (delta > 33) {
+    if (Math.random() < 0.35) createObject('❄️', 'snow', 100 + Math.random() * 100);
+    if (Math.random() < 0.04) createObject('💣', 'bomb', 110 + Math.random() * 90);
+    if (Math.random() < 0.008) createObject('🎁', 'gift', 70 + Math.random() * 40);
+    if (Math.random() < 0.006) createObject('🧊', 'ice', 60 + Math.random() * 30);
+    lastSpawnTime = timestamp;
   }
 
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-
 // === СТАРТ ИГРЫ ===
 function startGame() {
-  // Полный reset
   score = 0;
   gameActive = true;
   isFrozen = false;
   isPaused = false;
   objects = [];
+  lastSpawnTime = 0;
 
-  scoreEl.textContent = "Score: 0";
+  updateScore();
   timerEl.textContent = "10:00";
 
   gameOverEl.style.display = 'none';
   pauseBtn.textContent = "Pause";
-
-  document.getElementById('freeze-overlay')?.remove();
-  document.getElementById('freeze-timer')?.remove();
-  document.getElementById('pause-overlay')?.remove();
-  document.querySelectorAll('.object').forEach(el => el.remove());
+  document.querySelectorAll('#freeze-overlay, #freeze-timer, #pause-overlay, .object').forEach(el => el.remove());
 
   startTime = Date.now();
 
   if (timerInterval) clearInterval(timerInterval);
-
   timerInterval = setInterval(() => {
-    if (isPaused) return;
+    if (isPaused || isFrozen) return;
     const elapsed = Date.now() - startTime;
     const remaining = CONFIG.GAME_DURATION - elapsed;
-
     if (remaining <= 0) {
       clearInterval(timerInterval);
       endGame(true);
     } else {
       timerEl.textContent = formatTime(remaining);
     }
-  }, 1000);
+  }, 100);
 
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-
-// === СТАРТОВЫЙ ЭКРАН ===
+// === СТАРТ / ПАУЗА / РЕСТАРТ ===
 startBtn.addEventListener("click", () => {
   startScreen.style.display = "none";
   pauseBtn.style.display = 'block';
   startGame();
 });
 
-
-// === ПАУЗА ===
 pauseBtn.addEventListener("click", () => {
   if (!gameActive) return;
-
   isPaused = !isPaused;
-
+  pauseBtn.textContent = isPaused ? "Resume" : "Pause";
   if (isPaused) {
-    pauseBtn.textContent = "Resume";
+    cancelAnimationFrame(gameLoopId);
     showPauseOverlay();
   } else {
-    pauseBtn.textContent = "Pause";
     hidePauseOverlay();
     gameLoopId = requestAnimationFrame(gameLoop);
   }
 });
-
 
 function showPauseOverlay() {
   let overlay = document.getElementById("pause-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = "pause-overlay";
+    overlay.textContent = "PAUSED";
     game.appendChild(overlay);
   }
-  overlay.style.display = "block";
+  overlay.style.display = "flex";
 }
 
 function hidePauseOverlay() {
@@ -304,8 +261,6 @@ function hidePauseOverlay() {
   if (overlay) overlay.style.display = "none";
 }
 
-
-// === ПЕРЕЗАПУСК ===
 restartBtn.addEventListener('click', () => {
   gameOverEl.style.display = 'none';
   startGame();
