@@ -7,12 +7,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- ====== START SCREEN ====== -->
+  <div id="start-screen">
+    <h1>❄️ Frost Click</h1>
+    <p>Survive 10 minutes • Avoid bombs • Collect gifts</p>
+    <button id="start-btn">Start Game</button>
+  </div>
+
+  <!-- ====== GAME AREA ====== -->
   <div id="game">
     <div id="score">Score: 0</div>
     <div id="timer">10:00</div>
+
     <button id="connect-wallet">Connect Wallet</button>
     <button id="submit-score">Submit Score</button>
     <button id="show-leaderboard">Show Top 10</button>
+
+    <!-- NEW: Pause button -->
+    <button id="pause-btn">Pause</button>
+
+    <!-- Pause overlay (hidden by default) -->
+    <div id="pause-overlay"></div>
+
+    <!-- Game Over Window -->
     <div id="game-over">
       <h2 id="result-title">Game Over!</h2>
       <p id="final-score">Your score: 0</p>
@@ -21,38 +39,28 @@
     </div>
   </div>
 
-  <!-- Подключаем Web3.js (CDN) -->
+  <!-- Web3.js -->
   <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
-  
-  <!-- Подключаем модули -->
+
+  <!-- Modules -->
   <script type="module" src="config.js"></script>
   <script type="module" src="web3.js"></script>
   <script type="module" src="game.js"></script>
+
+  <!-- ====== Snowfall Background ====== -->
   <script>
-  // Create subtle snowfall
-  function createSnow() {
-    const snow = document.createElement("div");
-    snow.classList.add("snowflake");
-    snow.textContent = "•"; // tiny dot (perfect for light neon snow)
+    function createSnow() {
+      const snow = document.createElement("div");
+      snow.classList.add("snowflake");
+      snow.textContent = "•";
+      snow.style.left = Math.random() * 100 + "vw";
+      snow.style.fontSize = (8 + Math.random() * 8) + "px";
+      snow.style.animationDuration = (6 + Math.random() * 8) + "s";
+      document.body.appendChild(snow);
+      setTimeout(() => snow.remove(), 15000);
+    }
+    setInterval(createSnow, 220);
+  </script>
 
-    // random horizontal start
-    snow.style.left = Math.random() * 100 + "vw";
-
-    // random size
-    snow.style.fontSize = (8 + Math.random() * 8) + "px";
-
-    // random duration
-    snow.style.animationDuration = (6 + Math.random() * 8) + "s";
-
-    document.body.appendChild(snow);
-
-    // remove when off-screen
-    setTimeout(() => snow.remove(), 15000);
-  }
-
-  // generate snow continuously
-  setInterval(createSnow, 220);
-</script>
 </body>
 </html>
-
