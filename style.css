@@ -1,5 +1,5 @@
 /* ===========================
-   GLOBAL
+   GLOBAL BACKGROUND
 =========================== */
 html, body {
   margin: 0;
@@ -7,6 +7,8 @@ html, body {
   height: 100%;
   user-select: none;
   -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -22,48 +24,50 @@ body {
 =========================== */
 #start-screen {
   position: fixed;
-  width: 100%;
-  height: 100%;
-  background: rgba(5, 10, 30, 0.7);
-  backdrop-filter: blur(6px);
-
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 15, 40, 0.85);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
   z-index: 300;
+  text-align: center;
 }
 
-#start-screen .title {
-  font-size: 64px;
-  font-weight: bold;
+#start-screen h1 {
+  font-size: 48px;
   color: #4dffcc;
-  text-shadow: 0 0 20px #4dffcc;
-  margin: 0 0 10px 0;
+  text-shadow: 0 0 15px #4dffcc;
+  margin-bottom: 10px;
 }
 
-#start-screen .subtitle {
-  font-size: 22px;
-  opacity: 0.85;
-  margin-bottom: 40px;
+#start-screen p {
+  font-size: 18px;
+  color: #c8faff;
+  margin-bottom: 25px;
+  text-shadow: 0 0 10px rgba(77,255,204,0.5);
 }
 
 #start-btn {
-  font-size: 22px;
-  padding: 14px 40px;
+  width: 200px;
+  padding: 14px;
+  font-size: 18px;
   border-radius: 10px;
-  border: none;
-  cursor: pointer;
   background: rgba(77,255,204,0.25);
   border: 1px solid rgba(77,255,204,0.35);
   color: white;
-  backdrop-filter: blur(4px);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
   transition: 0.2s;
 }
+
 #start-btn:hover {
   background: rgba(77,255,204,0.45);
-  box-shadow: 0 0 18px rgba(77,255,204,0.7);
+  box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
 
 /* ===========================
@@ -75,15 +79,65 @@ body {
   height: 100vh;
   cursor: pointer;
   user-select: none;
+  z-index: 1;
 }
 
-/* OBJECTS (snow/bomb/ice/gift) */
+/* ===========================
+   PAUSE OVERLAY
+=========================== */
+#pause-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(20, 30, 60, 0.6);
+  backdrop-filter: blur(4px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 250;
+  color: white;
+  font-size: 40px;
+  text-shadow: 0 0 15px #4dffcc;
+}
+
+/* ===========================
+   PAUSE BUTTON
+=========================== */
+#pause-btn {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 40;
+
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(4px);
+  color: white;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#pause-btn:hover {
+  transform: translateX(-50%) scale(1.06);
+  box-shadow: 0 0 12px rgba(77,255,204,0.8);
+}
+
+/* ===========================
+   BASE OBJECT STYLE
+=========================== */
 .object {
   position: absolute;
   top: -50px;
-  width: 50px;
   font-size: 32px;
+  user-select: none;
   text-align: center;
+  width: 50px;
   transform: translateX(-50%);
   transition: transform 0.10s linear;
 }
@@ -92,156 +146,169 @@ body {
   transform: translateX(-50%) scale(1.18);
 }
 
-/* Snow */
+/* ❄️ Snow — NO glow */
 .object.snow {
   color: #aeeaff;
   filter: none;
+  text-shadow: none;
 }
 
-/* Bomb — red glow */
+/* 💣 Bomb — red glow */
 .object.bomb {
   animation: blink 0.9s infinite;
-  filter: drop-shadow(0 0 10px rgba(255, 40, 40, 0.95)) drop-shadow(0 0 20px rgba(255, 30, 30, 0.6));
+  filter: drop-shadow(0 0 8px rgba(255,40,40,0.93))
+          drop-shadow(0 0 18px rgba(255,30,30,0.55)) !important;
+  z-index: 2;
 }
 
 @keyframes blink {
-  0%,45% {opacity:1;}
-  50%,95% {opacity:0.25;}
-  100% {opacity:1;}
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0.25; }
+  100% { opacity: 1; }
 }
 
-/* Ice */
-.object.ice { filter: none; }
+/* Ice — no glow */
+.object.ice {
+  filter: none;
+  text-shadow: none;
+}
 
-/* Gift */
-.object.gift { filter: none; }
+/* Gift — no glow */
+.object.gift {
+  filter: none;
+  text-shadow: none;
+}
 
-/* SCORE */
+/* ===========================
+   SCORE + TIMER
+=========================== */
 #score {
   position: absolute;
   top: 20px;
   left: 20px;
-  font-size: 26px;
   color: #4dffcc;
-  text-shadow: 0 0 8px #4dffcc;
+  font-size: 26px;
   z-index: 10;
+  text-shadow: 0 0 8px #4dffcc;
 }
 
-/* TIMER */
 #timer {
   position: absolute;
   top: 20px;
   right: 20px;
-  font-size: 22px;
   color: #9f4dff;
-  text-shadow: 0 0 8px #9f4dff;
+  font-size: 22px;
   z-index: 10;
+  text-shadow: 0 0 8px #9f4dff;
 }
 
-/* BUTTONS */
-button, #connect-wallet, #submit-score, #show-leaderboard, #pause-btn {
+/* ===========================
+   BUTTONS
+=========================== */
+button,
+#connect-wallet,
+#submit-score,
+#show-leaderboard {
   position: absolute;
   width: 160px;
-  padding: 10px;
+  padding: 10px 14px;
   font-size: 14px;
-  border-radius: 8px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  background: rgba(255,255,255,0.1);
-  color: white;
-  backdrop-filter: blur(4px);
-  transition: 0.15s;
   z-index: 30;
+  font-weight: bold;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(4px);
+  color: white;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-#connect-wallet { top:20px; right:150px; }
-#submit-score { top:60px; right:150px; display:none; }
-#show-leaderboard { top:100px; right:150px; display:none; }
-#pause-btn { top:20px; left:50%; transform:translateX(-50%); }
+button:hover,
+#connect-wallet:hover,
+#submit-score:hover,
+#show-leaderboard:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 12px rgba(77,255,204,0.8);
+}
 
-/* GAME OVER */
+#connect-wallet { top: 20px; right: 150px; box-shadow: 0 0 6px #5d5dff; }
+#submit-score { top: 60px; right: 150px; display: none; box-shadow: 0 0 6px #ff994d; }
+#show-leaderboard { top: 100px; right: 150px; display: none; box-shadow: 0 0 6px #4dffcc; }
+
+/* ===========================
+   GAME OVER
+=========================== */
 #game-over {
   position: absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:rgba(0,0,0,0.7);
-  padding:30px;
-  border-radius:15px;
-  text-align:center;
-  display:none;
-  z-index:100;
-  box-shadow:0 0 18px rgba(77,255,204,0.5);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.75);
+  color: white;
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  display: none;
+  z-index: 50;
+  box-shadow: 0 0 18px rgba(77,255,204,0.5);
 }
 
-#game-over h2 { margin-top:0; }
-
-/* PAUSE OVERLAY */
-#pause-overlay {
-  position:absolute;
-  width:100%;
-  height:100%;
-  top:0;
-  left:0;
-  background:rgba(10,20,40,0.6);
-  backdrop-filter:blur(4px);
-  display:none;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  z-index:200;
+#game-over h2 {
+  margin-top: 0;
+  color: #ffd94d;
+  text-shadow: 0 0 6px #ffd94d;
 }
 
-#pause-text {
-  font-size:48px;
-  margin-bottom:20px;
-  text-shadow:0 0 15px #4dffcc;
+.win h2 {
+  color: #4dffcc !important;
+  text-shadow: 0 0 6px #4dffcc !important;
 }
 
-#resume-btn {
-  padding:12px 26px;
-  font-size:20px;
-  border-radius:10px;
-  background:rgba(77,255,204,0.25);
-  border:1px solid rgba(77,255,204,0.35);
-  color:white;
-  cursor:pointer;
-  transition:0.15s;
-}
-#resume-btn:hover {
-  background:rgba(77,255,204,0.45);
-  box-shadow:0 0 12px rgba(77,255,204,0.7);
-}
-
-/* SNOWFALL BG */
-.snowflake {
+/* ===========================
+   LEADERBOARD
+=========================== */
+#leaderboard-modal {
   position: fixed;
-  top: -10px;
-  color: #aeeaff;
-  font-size: 10px;
-  opacity: 0.8;
-  pointer-events: none;
-  animation-name: fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  z-index: 0;
-}
-@keyframes fall {
-  0% { transform: translateY(-10px); }
-  100% { transform: translateY(110vh); }
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  padding: 28px;
+  width: 340px;
+  color: white;
+  border-radius: 14px;
+  z-index: 200;
+
+  background: rgba(10,20,50,0.45);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 25px rgba(77,255,204,0.25);
+  border: 1px solid rgba(255,255,255,0.08);
+
+  opacity: 0;
+  animation: leaderboardFadeIn 0.28s forwards;
 }
 
-/* CLICK FLASH */
-.neon-flash {
-  position:absolute;
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(0,255,255,0.9),rgba(0,255,255,0)70%);
-  animation:neon-flash 0.25s ease-out forwards;
-  pointer-events:none;
+@keyframes leaderboardFadeIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.88); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
-@keyframes neon-flash {
-  0% { transform:scale(0.3); opacity:1; }
-  100% { transform:scale(1.5); opacity:0; }
+
+/* ===========================
+   CLICK FLASH
+=========================== */
+.neon-flash {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,255,255,0.9), rgba(0,255,255,0) 70%);
+  pointer-events: none;
+  animation: neon-flash-anim 0.25s ease-out forwards;
+  z-index: 60;
+}
+
+@keyframes neon-flash-anim {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
