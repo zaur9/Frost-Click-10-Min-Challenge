@@ -92,12 +92,35 @@ body {
   background: rgba(20, 30, 60, 0.6);
   backdrop-filter: blur(4px);
   display: none;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 250;
+}
+
+#pause-text {
+  font-size: 46px;
   color: white;
-  font-size: 40px;
+  margin-bottom: 20px;
   text-shadow: 0 0 15px #4dffcc;
+}
+
+#resume-btn {
+  width: 160px;
+  padding: 12px;
+  font-size: 18px;
+  background: rgba(77,255,204,0.25);
+  border: 1px solid rgba(77,255,204,0.35);
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: 0.2s;
+}
+
+#resume-btn:hover {
+  background: rgba(77,255,204,0.45);
+  box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
 
 /* ===========================
