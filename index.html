@@ -7,33 +7,31 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- ====== START SCREEN ====== -->
+  
+  <!-- ===== START SCREEN ===== -->
   <div id="start-screen">
-    <h1>❄️ Frost Click</h1>
-    <p>Survive 10 minutes • Avoid bombs • Collect gifts</p>
+    <h1 class="title">FROST CLICK</h1>
+    <p class="subtitle">10-Minute Survival Challenge</p>
     <button id="start-btn">Start Game</button>
   </div>
 
-  <!-- ====== GAME AREA ====== -->
+  <!-- ===== GAME AREA ===== -->
   <div id="game">
     <div id="score">Score: 0</div>
     <div id="timer">10:00</div>
+
+    <button id="pause-btn">Pause</button>
 
     <button id="connect-wallet">Connect Wallet</button>
     <button id="submit-score">Submit Score</button>
     <button id="show-leaderboard">Show Top 10</button>
 
-    <!-- NEW: Pause button -->
-    <button id="pause-btn">Pause</button>
+    <!-- PAUSE OVERLAY -->
+    <div id="pause-overlay">
+      <div id="pause-text">PAUSED</div>
+      <button id="resume-btn">Resume</button>
+    </div>
 
-    <!-- Pause overlay (hidden by default) -->
-   <div id="pause-overlay">
-  <div id="pause-text">PAUSED</div>
-  <button id="resume-btn">Resume</button>
-</div>
-
-    <!-- Game Over Window -->
     <div id="game-over">
       <h2 id="result-title">Game Over!</h2>
       <p id="final-score">Your score: 0</p>
@@ -42,7 +40,7 @@
     </div>
   </div>
 
-  <!-- Web3.js -->
+  <!-- Web3 -->
   <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
 
   <!-- Modules -->
@@ -50,21 +48,20 @@
   <script type="module" src="web3.js"></script>
   <script type="module" src="game.js"></script>
 
-  <!-- ====== Snowfall Background ====== -->
   <script>
-    function createSnow() {
-      const snow = document.createElement("div");
-      snow.classList.add("snowflake");
-      snow.textContent = "•";
-      snow.style.left = Math.random() * 100 + "vw";
-      snow.style.fontSize = (8 + Math.random() * 8) + "px";
-      snow.style.animationDuration = (6 + Math.random() * 8) + "s";
-      document.body.appendChild(snow);
-      setTimeout(() => snow.remove(), 15000);
-    }
-    setInterval(createSnow, 220);
+  // Subtle snowfall
+  function createSnow() {
+    const snow = document.createElement("div");
+    snow.classList.add("snowflake");
+    snow.textContent = "•";
+    snow.style.left = Math.random() * 100 + "vw";
+    snow.style.fontSize = (8 + Math.random() * 8) + "px";
+    snow.style.animationDuration = (6 + Math.random() * 8) + "s";
+    document.body.appendChild(snow);
+    setTimeout(() => snow.remove(), 15000);
+  }
+  setInterval(createSnow, 220);
   </script>
 
 </body>
 </html>
-
