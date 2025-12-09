@@ -197,6 +197,11 @@ function endGame(isWin) {
 function gameLoop() {
   if (!gameActive || isPaused) return;
 
+  if (isPaused) {
+  gameLoopId = requestAnimationFrame(gameLoop);
+  return;
+}
+
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
 
@@ -277,6 +282,26 @@ pauseBtn.addEventListener("click", () => {
   if (!gameActive) return;
 
   isPaused = !isPaused;
+
+  document.addEventListener("DOMContentLoaded", () => {
+  const pauseBtn = document.getElementById("pause-btn");
+  const pauseOverlay = document.getElementById("pause-overlay");
+  const resumeBtn = document.getElementById("resume-btn");
+
+  pauseBtn.addEventListener("click", () => {
+    if (!isPaused) {
+      isPaused = true;
+      pauseOverlay.style.display = "flex";
+    }
+  });
+
+  resumeBtn.addEventListener("click", () => {
+    if (isPaused) {
+      isPaused = false;
+      pauseOverlay.style.display = "none";
+    }
+  });
+});
 
   if (isPaused) {
     pauseBtn.textContent = "Resume";
