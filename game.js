@@ -230,7 +230,6 @@ function gameLoop() {
     if (!isFrozen) {
       obj.y += obj.speed * 0.016;
 
-      // NEW: GPU-friendly transform (keep X centering)
       obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
       if (obj.y > window.innerHeight) {
@@ -240,7 +239,8 @@ function gameLoop() {
     }
   }
 
-  if (gameActive) {
+  // FIX: Не создавать новые объекты во время фриза
+  if (gameActive && !isFrozen) {
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
