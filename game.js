@@ -21,58 +21,72 @@ const restartBtn = document.getElementById('restart');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 
-// userAccount
+// userAccount принадлежит игре, не web3.js
 let userAccount = null;
 export const setUserAccount = addr => { userAccount = addr; };
 
-// GETTERS
+// Геттеры
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
 
-export { updateScore, endGame };
+// Экспортируем нужные функции
+export {
+  updateScore,
+  endGame
+};
 
-// Helpers
-const setGameActive = v => gameActive = v;
-const setScore = v => score = v;
+// Вспомогательные функции
+const setGameActive = val => { gameActive = val; };
+const setScore = val => { score = val; };
 
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
 }
 
 function formatTime(ms) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Prevent text selection via mouse drag (extra guard)
+game.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+});
+
 // ------------------------------
-// CREATE OBJECT (fixed)
+// CREATE OBJECT — изменено: add type class, y через transform
 // ------------------------------
 function createObject(emoji, type, speed) {
   if (!gameActive) return;
 
   const obj = document.createElement('div');
   obj.className = 'object';
-  obj.classList.add(type);        // <---- ВАЖНО (snow / bomb / gift / ice)
-
+  // add type class for CSS targeting
+  if (type) obj.classList.add(type);
   if (type === 'bomb') obj.classList.add('bomb');
-
   obj.textContent = emoji;
 
-  const posX = Math.random() * (window.innerWidth - 50);
-  obj.style.left = posX + 'px';
-  obj.style.transform = `translateX(-50%) translateY(-50px)`;  // Correct
+  const left = Math.random() * (window.innerWidth - 50);
+  obj.style.left = left + 'px';
+  obj.style.transform = `translateX(-50%) translateY(-50px)`;
 
   game.appendChild(obj);
 
-  objects.push({ el: obj, type, y: -50, speed, x: posX });
+  objects.push({ el: obj, type, y: -50, speed, x: left });
 }
 
 // ------------------------------
-// CLICK HANDLER
+// КЛИКИ
 // ------------------------------
 game.addEventListener('click', (e) => {
+  // Clear any selection first — ensures clicks always register
+  if (window.getSelection) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) sel.removeAllRanges();
+  }
+
   if (!gameActive && !isFrozen) return;
 
   const x = e.clientX;
@@ -111,7 +125,7 @@ game.addEventListener('click', (e) => {
       flash.className = "neon-flash";
       flash.style.left = (rect.left + rect.width / 2 - 20) + "px";
       flash.style.top = (rect.top + rect.height / 2 - 20) + "px";
-      game.appendChild(flash);
+      document.getElementById("game").appendChild(flash);
       setTimeout(() => flash.remove(), 250);
 
       if (isFrozen) {
@@ -126,8 +140,7 @@ game.addEventListener('click', (e) => {
       if (type === 'bomb') {
         endGame(false);
         return;
-      }
-      if (type === 'ice') {
+      } else if (type === 'ice') {
         activateFreeze();
         score += 2;
       } else if (type === 'gift') {
@@ -142,9 +155,6 @@ game.addEventListener('click', (e) => {
   }
 });
 
-// ------------------------------
-// FREEZE MODE
-// ------------------------------
 function activateFreeze() {
   if (isFrozen) return;
 
@@ -153,10 +163,10 @@ function activateFreeze() {
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
   Object.assign(overlay.style, {
-    position: 'absolute', top: '0', left: '0',
-    width: '100%', height: '100%',
-    background: 'rgba(200,240,255,0.3)',
-    pointerEvents: 'none', zIndex: '5'
+    position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
+    background: 'rgba(200, 240, 255, 0.3)',
+    pointerEvents: 'none',
+    zIndex: '5'
   });
   game.appendChild(overlay);
 
@@ -170,6 +180,7 @@ function activateFreeze() {
   game.appendChild(freezeTimer);
 
   let timeLeft = 5;
+
   const countdown = setInterval(() => {
     timeLeft--;
 
@@ -184,9 +195,6 @@ function activateFreeze() {
   }, 1000);
 }
 
-// ------------------------------
-// END GAME
-// ------------------------------
 function endGame(isWin) {
   if (!gameActive) return;
 
@@ -211,7 +219,7 @@ function endGame(isWin) {
 }
 
 // ------------------------------
-// MAIN GAME LOOP
+// GAME LOOP — главный блок
 // ------------------------------
 function gameLoop() {
   if (!gameActive) return;
@@ -222,7 +230,7 @@ function gameLoop() {
     if (!isFrozen) {
       obj.y += obj.speed * 0.016;
 
-      // IMPORTANT: keep X centering
+      // NEW: GPU-friendly transform (keep X centering)
       obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
       if (obj.y > window.innerHeight) {
@@ -242,9 +250,6 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// ------------------------------
-// START GAME
-// ------------------------------
 function startGame() {
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
 
@@ -264,19 +269,20 @@ function startGame() {
 
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
+
   document.querySelectorAll('.object').forEach(el => el.remove());
 
   if (timerInterval) clearInterval(timerInterval);
 
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - startTime;
-    const rem = CONFIG.GAME_DURATION - elapsed;
+    const remaining = CONFIG.GAME_DURATION - elapsed;
 
-    if (rem <= 0) {
+    if (remaining <= 0) {
       clearInterval(timerInterval);
       endGame(true);
     } else {
-      timerEl.textContent = formatTime(rem);
+      timerEl.textContent = formatTime(remaining);
     }
   }, 1000);
 
