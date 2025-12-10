@@ -1,3 +1,4 @@
+/* GLOBAL */
 html, body {
   margin: 0;
   padding: 0;
@@ -261,29 +262,6 @@ body {
 }
 #resume-btn:hover { background: rgba(77,255,204,0.5); }
 
-.object.toy-green,
-.object.toy-purple,
-.object.somnia {
-  width: 32px;
-  height: 32px;
-  line-height: 32px;
-  text-align: center;
-  border-radius: 50%;
-  font-weight: bold;
-  font-size: 22px;
-}
-
-.object.toy-green {
-  background: radial-gradient(circle, #4dff88, #00cc44);
-  box-shadow: 0 0 12px rgba(77,255,136,0.8);
-}
-
-.object.toy-purple {
-  background: radial-gradient(circle, #cc88ff, #aa44dd);
-  box-shadow: 0 0 12px rgba(204,136,255,0.8);
-}
-
-/* REPLACE .object.somnia in style.css */
 .object.somnia {
   width: 32px !important;
   height: 32px !important;
