@@ -48,17 +48,6 @@ body {
   width: 200px;
   padding: 14px;
   font-size: 18px;
-  border-radius: 10px;
-  background: rgba(77,255,204,0.25);
-  border: 1px solid rgba(77,255,204,0.35);
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#start-btn:hover {
-  background: rgba(77,255,204,0.45);
-  box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
 
 /* GAME */
@@ -95,13 +84,7 @@ body {
   width: 120px;
   padding: 10px 14px;
   font-size: 14px;
-  border-radius: 8px;
-  cursor: pointer;
   z-index: 40;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25);
-  backdrop-filter: blur(4px);
-  color: white;
 }
 
 /* OBJECTS */
@@ -158,13 +141,7 @@ body {
   width: 160px;
   padding: 10px 14px;
   font-size: 14px;
-  border-radius: 8px;
-  cursor: pointer;
   z-index: 30;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  backdrop-filter: blur(4px);
-  color: white;
 }
 
 #connect-wallet { top: 20px; right: 150px; }
@@ -254,13 +231,35 @@ body {
 #resume-btn {
   padding: 16px 40px;
   font-size: 24px;
-  background: rgba(77,255,204,0.3);
-  border: 2px solid #4dffcc;
-  border-radius: 12px;
-  color: white;
-  cursor: pointer;
 }
 #resume-btn:hover { background: rgba(77,255,204,0.5); }
+
+/* Unified button look (start style), keep per-button sizing/positions */
+#start-btn,
+#pause-btn,
+#connect-wallet,
+#submit-score,
+#show-leaderboard,
+#resume-btn,
+#restart {
+  border-radius: 10px;
+  background: rgba(77,255,204,0.25);
+  border: 1px solid rgba(77,255,204,0.35);
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#start-btn:hover,
+#pause-btn:hover,
+#connect-wallet:hover,
+#submit-score:hover,
+#show-leaderboard:hover,
+#resume-btn:hover,
+#restart:hover {
+  background: rgba(77,255,204,0.45);
+  box-shadow: 0 0 12px rgba(77,255,204,0.7);
+}
 
 .object.somnia {
   width: 32px !important;
