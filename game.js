@@ -338,6 +338,15 @@ function updateMusicButton() {
 }
 
 if (startMusicToggle && bgMusic) {
+  // auto-play on start screen by default
+  musicEnabled = true;
+  updateMusicButton();
+  bgMusic.play().catch(() => {
+    // if blocked by browser, fall back to Off state until user clicks
+    musicEnabled = false;
+    updateMusicButton();
+  });
+
   updateMusicButton();
   startMusicToggle.addEventListener('click', async () => {
     if (!musicEnabled) {
@@ -361,8 +370,9 @@ if (startMusicToggle && bgMusic) {
 startBtn.addEventListener("click", () => {
   startScreen.style.display = "none";
   pauseBtn.style.display = 'block';
-  if (musicEnabled && bgMusic && bgMusic.paused) {
-    bgMusic.play().catch(() => {});
+  // stop music when leaving start screen
+  if (bgMusic && !bgMusic.paused) {
+    bgMusic.pause();
   }
   startGame();
 });
