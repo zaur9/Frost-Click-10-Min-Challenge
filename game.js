@@ -48,8 +48,6 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
-const startMusicToggle = document.getElementById('start-music-toggle');
-const bgMusic = document.getElementById('bg-music');
 
 // Wallet
 let userAccount = null;
@@ -331,70 +329,10 @@ function startGame() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// === MUSIC TOGGLE (start screen) ===
-let musicEnabled = false;
-function updateMusicButton() {
-  if (startMusicToggle) startMusicToggle.textContent = musicEnabled ? 'Music: On' : 'Music: Off';
-}
-
-function tryPlayMusic(auto = false) {
-  if (!bgMusic) return Promise.resolve();
-  // browsers often allow muted autoplay; unmute after success
-  if (auto) bgMusic.muted = true;
-  return bgMusic.play().then(() => {
-    if (auto) bgMusic.muted = false;
-    musicEnabled = true;
-    updateMusicButton();
-  }).catch(() => {
-    if (auto) bgMusic.muted = false;
-    musicEnabled = false;
-    updateMusicButton();
-  });
-}
-
-if (startMusicToggle && bgMusic) {
-  // auto-play attempt on load
-  musicEnabled = true;
-  updateMusicButton();
-  tryPlayMusic(true);
-
-  updateMusicButton();
-  startMusicToggle.addEventListener('click', async () => {
-    if (!musicEnabled) {
-      try {
-        await tryPlayMusic(false);
-      } catch (err) {
-        console.error('Music play blocked', err);
-        musicEnabled = false;
-      }
-    } else {
-      bgMusic.pause();
-      musicEnabled = false;
-    }
-    updateMusicButton();
-  });
-
-  // fallback: first user interaction starts music if autoplay failed
-  const kickstart = () => {
-    if (!musicEnabled) {
-      tryPlayMusic(false);
-    }
-    document.removeEventListener('pointerdown', kickstart);
-    document.removeEventListener('keydown', kickstart);
-  };
-  document.addEventListener('pointerdown', kickstart);
-  document.addEventListener('keydown', kickstart);
-}
-
-
 // === START SCREEN ===
 startBtn.addEventListener("click", () => {
   startScreen.style.display = "none";
   pauseBtn.style.display = 'block';
-  // stop music when leaving start screen
-  if (bgMusic && !bgMusic.paused) {
-    bgMusic.pause();
-  }
   startGame();
 });
 
