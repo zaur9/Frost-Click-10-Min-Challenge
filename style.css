@@ -261,3 +261,31 @@ body {
   cursor: pointer;
 }
 #resume-btn:hover { background: rgba(77,255,204,0.5); }
+
+.object.toy-green,
+.object.toy-purple,
+.object.somnia {
+  height: 50px;
+  line-height: 50px;
+  text-align: center;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.object.toy-green {
+  background: radial-gradient(circle, #4dff88, #00cc44);
+  box-shadow: 0 0 12px rgba(77,255,136,0.8);
+}
+
+.object.toy-purple {
+  background: radial-gradient(circle, #cc88ff, #aa44dd);
+  box-shadow: 0 0 12px rgba(204,136,255,0.8);
+}
+
+.object.somnia {
+  background: linear-gradient(135deg, #4d9fff, #9966ff);
+  box-shadow: 0 0 15px rgba(77,159,255,0.9);
+  color: white;
+  font-size: 28px;
+}
