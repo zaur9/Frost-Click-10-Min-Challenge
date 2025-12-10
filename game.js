@@ -15,6 +15,12 @@ let timerInterval = null;
 let pauseStart = null;
 let pausedAccum = 0;
 
+// Somnia schedule
+const SOMNIA_INTERVAL_MS = 58_000;
+const SOMNIA_TOTAL = 10;
+let somniaSchedule = [];
+let nextSomniaIndex = 0;
+
 // DOM
 const game = document.getElementById('game');
 const scoreEl = document.getElementById('score');
@@ -223,7 +229,14 @@ function gameLoop() {
   }
 
   if (!isPaused && !isFrozen) {
-    if (Math.random() < 1 / 3500) createObject('', 'somnia', 50 + Math.random() * 20);
+    const elapsed = Date.now() - startTime - pausedAccum;
+
+    // scheduled somnia drops: 10 pieces, every 58s
+    if (nextSomniaIndex < somniaSchedule.length && elapsed >= somniaSchedule[nextSomniaIndex]) {
+      createObject('', 'somnia', 50 + Math.random() * 20);
+      nextSomniaIndex++;
+    }
+
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
@@ -266,6 +279,10 @@ function startGame() {
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
 
   startTime = Date.now();
+
+  // build somnia schedule: first drop at 58s, then every 58s, total 10
+  somniaSchedule = Array.from({ length: SOMNIA_TOTAL }, (_, i) => (i + 1) * SOMNIA_INTERVAL_MS);
+  nextSomniaIndex = 0;
 
   timerInterval = setInterval(() => {
     if (isPaused) return;
