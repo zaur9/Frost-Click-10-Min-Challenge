@@ -110,6 +110,8 @@ async function handleConnectWallet() {
     }
 
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
+    window.contract = contract;
+    window.userAccount = account;
 
     showLeaderboardBtn.style.display = 'block';
     if (startShowLeaderboardBtn) startShowLeaderboardBtn.style.display = 'block';
