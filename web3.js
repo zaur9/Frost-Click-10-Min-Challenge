@@ -49,6 +49,15 @@ const contractABI = [
   }
 ];
 
+async function fetchCurrentOnChainScore(account) {
+  if (!contract) return 0;
+  const idxPlusOne = await contract.methods.indexPlusOne(account).call();
+  if (idxPlusOne === "0" || idxPlusOne === 0) return 0;
+  const idx = Number(idxPlusOne) - 1;
+  const entry = await contract.methods.leaderboard(idx).call();
+  return Number(entry.score);
+}
+
 
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
@@ -139,6 +148,13 @@ submitScoreBtn.addEventListener('click', async () => {
   const currentScore = getScore();
   if (currentScore <= 0) {
     alert('Score must be > 0');
+    return;
+  }
+
+  // Prevent tx if not beating own on-chain record (if exists)
+  const onchainScore = await fetchCurrentOnChainScore(account);
+  if (currentScore <= onchainScore) {
+    alert(`Need to beat your record: ${onchainScore}`);
     return;
   }
 
