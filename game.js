@@ -13,7 +13,7 @@ let timerInterval = null;
 
 // click hitbox padding (only bottom) to make fast objects easier to catch
 const HIT_PADDING_BOTTOM = 12;
-const HIT_PADDING_SNOW_BOTTOM = 16;
+const HIT_PADDING_SNOW_TOP = 12;
 const HIT_PADDING_SNOW_SIDE = 4;
 
 // пауза
@@ -104,13 +104,15 @@ game.addEventListener('click', (e) => {
     const paddingBottom = isBomb
       ? 0
       : isSnow
-        ? HIT_PADDING_SNOW_BOTTOM
+        ? 0
         : HIT_PADDING_BOTTOM;
+
+    const paddingTop = isSnow ? HIT_PADDING_SNOW_TOP : 0;
 
     const paddingSide = isSnow ? HIT_PADDING_SNOW_SIDE : 0;
     const hit =
       x >= rect.left - paddingSide && x <= rect.right + paddingSide &&
-      y >= rect.top && y <= rect.bottom + paddingBottom;
+      y >= rect.top - paddingTop && y <= rect.bottom + paddingBottom;
 
     if (!hit) continue;
 
