@@ -153,6 +153,16 @@ body {
   font-size: 22px;
 }
 
+#pb-score {
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  color: #c8fff6;
+  font-size: 15px;
+  font-family: 'Arial', sans-serif;
+  z-index: 2;
+}
+
 /* BUTTONS */
 #connect-wallet,
 #submit-score,
