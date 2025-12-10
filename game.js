@@ -11,8 +11,8 @@ let gameLoopId = null;
 let startTime = 0;
 let timerInterval = null;
 
-// click hitbox padding to make fast objects easier to catch
-const HIT_PADDING = 12;
+// click hitbox padding (only bottom) to make fast objects easier to catch
+const HIT_PADDING_BOTTOM = 12;
 
 // пауза
 let pauseStart = null;
@@ -97,8 +97,8 @@ game.addEventListener('click', (e) => {
     const rect = obj.el.getBoundingClientRect();
 
     const hit =
-      x >= rect.left - HIT_PADDING && x <= rect.right + HIT_PADDING &&
-      y >= rect.top - HIT_PADDING && y <= rect.bottom + HIT_PADDING;
+      x >= rect.left && x <= rect.right &&
+      y >= rect.top && y <= rect.bottom + HIT_PADDING_BOTTOM;
 
     if (!hit) continue;
 
