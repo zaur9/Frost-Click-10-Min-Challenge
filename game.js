@@ -292,21 +292,24 @@ pauseBtn.addEventListener("click", () => {
   isPaused = !isPaused;
 
   if (isPaused) {
-    pauseBtn.textContent = "Resume";
+    pauseBtn.style.display = "none";
+    document.getElementById("pause-overlay").style.display = "flex";
     pauseStart = Date.now();
-    document.getElementById("pause-overlay").style.display = "block";
-    if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    cancelAnimationFrame(gameLoopId);
   } else {
-    pauseBtn.textContent = "Pause";
+    pauseBtn.style.display = "block";
     document.getElementById("pause-overlay").style.display = "none";
-
     if (pauseStart) {
       pausedAccum += Date.now() - pauseStart;
       pauseStart = null;
     }
-
     gameLoopId = requestAnimationFrame(gameLoop);
   }
+});
+
+// дополнительно — клик по кнопке Resume
+document.getElementById("resume-btn").addEventListener("click", () => {
+  pauseBtn.click(); // просто эмулируем клик по основной кнопке паузы
 });
 
 
