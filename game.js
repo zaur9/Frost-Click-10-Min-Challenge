@@ -31,7 +31,7 @@ let nextSomniaIndex = 0;
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
 const SPAWN_CHANCE_SNOW = 0.45;  // approx 3/s (0.45 * 6.7)
 const SPAWN_CHANCE_BOMB = 0.45;  // approx 3/s
-const SPAWN_CHANCE_GIFT = 0.0315; // ~0.21/s
+const SPAWN_CHANCE_GIFT = 0.18; // ~1.2/s (0.18 * 6.7)
 const SPAWN_CHANCE_ICE = 0.0225;  // ~0.15/s
 
 // DOM
@@ -266,9 +266,9 @@ function spawnTick() {
     nextSomniaIndex++;
   }
 
-  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 110 + Math.random() * 90);
+  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 110 + Math.random() * 70); // max 180
   if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 110 + Math.random() * 90);
-  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 70 + Math.random() * 40);
+  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 80 + Math.random() * 60); // max 140
   if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 60 + Math.random() * 30);
 }
 
