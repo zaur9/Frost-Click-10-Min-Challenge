@@ -223,9 +223,7 @@ function gameLoop() {
   }
 
   if (!isPaused && !isFrozen) {
-    if (Math.random() < 0.012) createObject('', 'toy-green', 85 + Math.random() * 45);
-if (Math.random() < 0.012) createObject('', 'toy-purple', 85 + Math.random() * 45);
-if (Math.random() < 1 / 3500) createObject('', 'somnia', 50 + Math.random() * 20);
+    if (Math.random() < 1 / 3500) createObject('', 'somnia', 50 + Math.random() * 20);
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
@@ -328,4 +326,3 @@ restartBtn.addEventListener('click', () => {
   gameOverEl.style.display = 'none';
   startGame();
 });
-
