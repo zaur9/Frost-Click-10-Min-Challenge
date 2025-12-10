@@ -12,6 +12,8 @@ let contract = null;
 const connectWalletBtn = document.getElementById('connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
+const startConnectWalletBtn = document.getElementById('start-connect-wallet');
+const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 
 const contractABI = [
   {
@@ -66,6 +68,7 @@ async function initWeb3() {
 
     ethereum.on('accountsChanged', () => {
       connectWalletBtn.textContent = "Connect Wallet";
+      if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
       submitScoreBtn.style.display = "none";
       showLeaderboardBtn.style.display = "none";
       contract = null;
@@ -74,6 +77,7 @@ async function initWeb3() {
 
     ethereum.on('chainChanged', () => {
       connectWalletBtn.textContent = "Connect Wallet";
+      if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
       submitScoreBtn.style.display = "none";
       showLeaderboardBtn.style.display = "none";
       contract = null;
@@ -89,8 +93,7 @@ async function initWeb3() {
 }
 
 
-// Connect Wallet
-connectWalletBtn.addEventListener('click', async () => {
+async function handleConnectWallet() {
   const ready = await initWeb3();
   if (!ready) return;
 
@@ -103,10 +106,14 @@ connectWalletBtn.addEventListener('click', async () => {
     setUserAccount(account);
 
     connectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
+    if (startConnectWalletBtn) {
+      startConnectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
+    }
 
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
 
     showLeaderboardBtn.style.display = 'block';
+    if (startShowLeaderboardBtn) startShowLeaderboardBtn.style.display = 'block';
 
     if (!isGameActive()) {
       submitScoreBtn.style.display = 'block';
@@ -115,7 +122,11 @@ connectWalletBtn.addEventListener('click', async () => {
   } catch (error) {
     console.error(error);
   }
-});
+}
+
+// Connect Wallet buttons (game HUD + start screen)
+connectWalletBtn.addEventListener('click', handleConnectWallet);
+if (startConnectWalletBtn) startConnectWalletBtn.addEventListener('click', handleConnectWallet);
 
 
 // Submit Score Signed
@@ -181,7 +192,7 @@ submitScoreBtn.addEventListener('click', async () => {
 
 
 // Leaderboard
-showLeaderboardBtn.addEventListener('click', async () => {
+async function handleShowLeaderboard() {
   if (!contract) return;
 
   const prevModal = document.getElementById('leaderboard-modal');
@@ -218,4 +229,7 @@ showLeaderboardBtn.addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
   }
-});
+}
+
+showLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
+if (startShowLeaderboardBtn) startShowLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
