@@ -15,6 +15,7 @@
     <div id="start-top-actions">
       <button id="start-connect-wallet">Connect Wallet</button>
       <button id="start-show-leaderboard">Show Top 10</button>
+      <button id="start-music-toggle">Music: Off</button>
     </div>
     <button id="start-btn">Start Game</button>
   </div>
@@ -47,6 +48,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
 
+  <!-- Background music -->
+  <audio id="bg-music" loop preload="auto" src="music.mp3"></audio>
+
   <!-- Modules (correct order) -->
   <script type="module" src="config.js"></script>
   <script type="module" src="game.js"></script>
@@ -69,3 +73,4 @@
 
 </body>
 </html>
+
