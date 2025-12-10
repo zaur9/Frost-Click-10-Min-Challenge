@@ -162,14 +162,9 @@ submitScoreBtn.addEventListener('click', async () => {
       { t: 'uint256', v: CONFIG.SOMNIA_CHAIN_ID }
     );
 
-    const prefixedHash = web3.utils.soliditySha3(
-      "\x19Ethereum Signed Message:\n32",
-      messageHash
-    );
-
     const signature = await window.ethereum.request({
       method: 'personal_sign',
-      params: [prefixedHash, account]
+      params: [messageHash, account]
     });
 
     const sig = signature.startsWith("0x") ? signature.slice(2) : signature;
