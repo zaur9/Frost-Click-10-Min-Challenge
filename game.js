@@ -10,6 +10,7 @@ let objects = [];
 let gameLoopId = null;
 let startTime = 0;
 let timerInterval = null;
+let spawnIntervalId = null;
 
 // click hitbox padding (only bottom) to make fast objects easier to catch
 const HIT_PADDING_BOTTOM = 12;
@@ -25,6 +26,13 @@ const SOMNIA_INTERVAL_MS = 58_000;
 const SOMNIA_TOTAL = 10;
 let somniaSchedule = [];
 let nextSomniaIndex = 0;
+
+// Time-based spawn settings
+const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
+const SPAWN_CHANCE_SNOW = 0.45;  // approx 3/s (0.45 * 6.7)
+const SPAWN_CHANCE_BOMB = 0.45;  // approx 3/s
+const SPAWN_CHANCE_GIFT = 0.0315; // ~0.21/s
+const SPAWN_CHANCE_ICE = 0.0225;  // ~0.15/s
 
 // DOM
 const game = document.getElementById('game');
@@ -245,22 +253,23 @@ function gameLoop() {
     }
   }
 
-  if (!isPaused && !isFrozen) {
-    const elapsed = Date.now() - startTime - pausedAccum;
+  gameLoopId = requestAnimationFrame(gameLoop);
+}
 
-    // scheduled somnia drops: 10 pieces, every 58s
-    if (nextSomniaIndex < somniaSchedule.length && elapsed >= somniaSchedule[nextSomniaIndex]) {
-      createObject('', 'somnia', 50 + Math.random() * 20);
-      nextSomniaIndex++;
-    }
+// time-based spawner independent of FPS
+function spawnTick() {
+  if (!gameActive || isPaused || isFrozen) return;
 
-    if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
-    if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
-    if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
-    if (Math.random() < 0.0025) createObject('🧊', 'ice', 60 + Math.random() * 30);
+  const elapsed = Date.now() - startTime - pausedAccum;
+  if (nextSomniaIndex < somniaSchedule.length && elapsed >= somniaSchedule[nextSomniaIndex]) {
+    createObject('', 'somnia', 50 + Math.random() * 20);
+    nextSomniaIndex++;
   }
 
-  gameLoopId = requestAnimationFrame(gameLoop);
+  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 110 + Math.random() * 90);
+  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 110 + Math.random() * 90);
+  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 70 + Math.random() * 40);
+  if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 60 + Math.random() * 30);
 }
 
 
@@ -294,6 +303,7 @@ function startGame() {
 
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
+  if (spawnIntervalId) clearInterval(spawnIntervalId);
 
   startTime = Date.now();
 
@@ -315,6 +325,7 @@ function startGame() {
     }
   }, 1000);
 
+  spawnIntervalId = setInterval(spawnTick, SPAWN_TICK_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
