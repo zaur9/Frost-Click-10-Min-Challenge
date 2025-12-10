@@ -106,30 +106,35 @@ game.addEventListener('click', (e) => {
 
     // FREEZE BONUS
     if (isFrozen) {
-      if (type === 'snow') score += 1;
-      if (type === 'bomb') score += 3;
-      if (type === 'gift') score += 5;
-      if (type === 'ice') score += 2;
-      updateScore();
-      return;
-    }
+  if (type === 'snow') score += 1;
+  else if (type === 'bomb') score += 3;
+  else if (type === 'gift') score += 5;
+  else if (type === 'ice') score += 2;
+  else if (type === 'toy-green' || type === 'toy-purple') score += 2;
+  else if (type === 'somnia') score += 100;
+  updateScore();
+  return;
+}
 
     if (type === 'bomb') {
       endGame(false);
       return;
     }
 
-    if (type === 'ice') {
-      activateFreeze();
-      score += 2;
-    } else if (type === 'gift') {
-      score += 5;
-    } else {
-      score += 1;
-    }
-
-    updateScore();
-    return;
+   if (type === 'ice') {
+  activateFreeze();
+  score += 2;
+} else if (type === 'toy-green' || type === 'toy-purple') {
+  score += 2;
+} else if (type === 'somnia') {
+  score += 100;
+} else if (type === 'gift') {
+  score += 5;
+} else {
+  score += 1;
+}
+updateScore();
+return;
   }
 });
 
@@ -216,6 +221,9 @@ function gameLoop() {
   }
 
   if (!isPaused && !isFrozen) {
+    if (Math.random() < 0.0125) createObject('', 'toy-green', 80 + Math.random() * 50);
+if (Math.random() < 0.0125) createObject('', 'toy-purple', 80 + Math.random() * 50);
+if (Math.random() < 0.000287) createObject('S', 'somnia', 40 + Math.random() * 30);
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
