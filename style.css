@@ -283,9 +283,39 @@ body {
   box-shadow: 0 0 12px rgba(204,136,255,0.8);
 }
 
+/* REPLACE .object.somnia in style.css */
 .object.somnia {
-  background: linear-gradient(135deg, #4d9fff, #9966ff);
-  box-shadow: 0 0 15px rgba(77,159,255,0.9);
-  color: white;
-  font-size: 28px;
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 50%;
+  background: radial-gradient(circle at 55% 45%, #4d9fff 0%, #7c3aed 60%, #a855f7 100%);
+  position: relative;
+  font-size: 0;
+  box-shadow: 0 0 20px rgba(77,159,255,0.9);
+}
+
+.object.somnia::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 32px;
+  height: 38px;
+  background: radial-gradient(circle at 40% 30%, #3b82f6 0%, #1e40af 80%);
+  border-radius: 60% 80% 40% 70% / 40% 25% 75% 60%;
+  clip-path: polygon(15% 0%, 95% 35%, 85% 100%, 5% 65%);
+  transform: rotate(12deg);
+}
+
+.object.somnia::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: -10px;
+  width: 32px;
+  height: 38px;
+  background: radial-gradient(circle at 60% 70%, #c084fc 0%, #7c3aed 80%);
+  border-radius: 70% 40% 80% 60% / 60% 75% 25% 40%;
+  clip-path: polygon(5% 0%, 85% 35%, 95% 100%, 15% 65%);
+  transform: rotate(-12deg);
 }
