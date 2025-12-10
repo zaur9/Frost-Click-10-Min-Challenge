@@ -1,15 +1,9 @@
-/* ===========================
-   GLOBAL BACKGROUND
-=========================== */
+/* GLOBAL */
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -19,9 +13,7 @@ body {
   color: white;
 }
 
-/* ===========================
-   START SCREEN
-=========================== */
+/* START SCREEN */
 #start-screen {
   position: fixed;
   top: 0;
@@ -61,7 +53,6 @@ body {
   border: 1px solid rgba(77,255,204,0.35);
   color: white;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition: 0.2s;
 }
 
@@ -70,21 +61,15 @@ body {
   box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
 
-/* ===========================
-   GAME AREA
-=========================== */
+/* GAME */
 #game {
   position: relative;
   width: 100vw;
   height: 100vh;
   cursor: pointer;
-  user-select: none;
-  z-index: 1;
 }
 
-/* ===========================
-   PAUSE OVERLAY
-=========================== */
+/* PAUSE OVERLAY */
 #pause-overlay {
   position: absolute;
   width: 100%;
@@ -100,10 +85,9 @@ body {
   text-shadow: 0 0 15px #4dffcc;
 }
 
-/* ===========================
-   PAUSE BUTTON
-=========================== */
+/* PAUSE BUTTON — hidden before start */
 #pause-btn {
+  display: none;
   position: absolute;
   top: 20px;
   left: 50%;
@@ -114,29 +98,18 @@ body {
   border-radius: 8px;
   cursor: pointer;
   z-index: 40;
-
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.25);
   backdrop-filter: blur(4px);
   color: white;
-
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-#pause-btn:hover {
-  transform: translateX(-50%) scale(1.06);
-  box-shadow: 0 0 12px rgba(77,255,204,0.8);
-}
-
-/* ===========================
-   BASE OBJECT STYLE
-=========================== */
+/* OBJECTS */
 .object {
   position: absolute;
   top: -50px;
   font-size: 32px;
   user-select: none;
-  text-align: center;
   width: 50px;
   transform: translateX(-50%);
   transition: transform 0.10s linear;
@@ -146,14 +119,7 @@ body {
   transform: translateX(-50%) scale(1.18);
 }
 
-/* ❄️ Snow — NO glow */
-.object.snow {
-  color: #aeeaff;
-  filter: none;
-  text-shadow: none;
-}
-
-/* 💣 Bomb — red glow */
+/* Bomb glow */
 .object.bomb {
   animation: blink 0.9s infinite;
   filter: drop-shadow(0 0 8px rgba(255,40,40,0.93))
@@ -167,29 +133,13 @@ body {
   100% { opacity: 1; }
 }
 
-/* Ice — no glow */
-.object.ice {
-  filter: none;
-  text-shadow: none;
-}
-
-/* Gift — no glow */
-.object.gift {
-  filter: none;
-  text-shadow: none;
-}
-
-/* ===========================
-   SCORE + TIMER
-=========================== */
+/* SCORE + TIMER */
 #score {
   position: absolute;
   top: 20px;
   left: 20px;
   color: #4dffcc;
   font-size: 26px;
-  z-index: 10;
-  text-shadow: 0 0 8px #4dffcc;
 }
 
 #timer {
@@ -198,14 +148,9 @@ body {
   right: 20px;
   color: #9f4dff;
   font-size: 22px;
-  z-index: 10;
-  text-shadow: 0 0 8px #9f4dff;
 }
 
-/* ===========================
-   BUTTONS
-=========================== */
-button,
+/* BUTTONS */
 #connect-wallet,
 #submit-score,
 #show-leaderboard {
@@ -213,33 +158,20 @@ button,
   width: 160px;
   padding: 10px 14px;
   font-size: 14px;
-  border: none;
   border-radius: 8px;
   cursor: pointer;
   z-index: 30;
-  font-weight: bold;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.2);
   backdrop-filter: blur(4px);
   color: white;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-button:hover,
-#connect-wallet:hover,
-#submit-score:hover,
-#show-leaderboard:hover {
-  transform: scale(1.06);
-  box-shadow: 0 0 12px rgba(77,255,204,0.8);
-}
+#connect-wallet { top: 20px; right: 150px; }
+#submit-score { top: 60px; right: 150px; display: none; }
+#show-leaderboard { top: 100px; right: 150px; display: none; }
 
-#connect-wallet { top: 20px; right: 150px; box-shadow: 0 0 6px #5d5dff; }
-#submit-score { top: 60px; right: 150px; display: none; box-shadow: 0 0 6px #ff994d; }
-#show-leaderboard { top: 100px; right: 150px; display: none; box-shadow: 0 0 6px #4dffcc; }
-
-/* ===========================
-   GAME OVER
-=========================== */
+/* GAME OVER */
 #game-over {
   position: absolute;
   top: 50%;
@@ -252,51 +184,24 @@ button:hover,
   text-align: center;
   display: none;
   z-index: 50;
-  box-shadow: 0 0 18px rgba(77,255,204,0.5);
 }
 
-#game-over h2 {
-  margin-top: 0;
-  color: #ffd94d;
-  text-shadow: 0 0 6px #ffd94d;
-}
-
-.win h2 {
-  color: #4dffcc !important;
-  text-shadow: 0 0 6px #4dffcc !important;
-}
-
-/* ===========================
-   LEADERBOARD
-=========================== */
+/* LEADERBOARD (CSS ONLY — без inline) */
 #leaderboard-modal {
   position: fixed;
-  top: 50%;
+  top: 20%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
-  padding: 28px;
-  width: 340px;
+  transform: translateX(-50%);
+  background: rgba(10,20,50,0.95);
   color: white;
-  border-radius: 14px;
-  z-index: 200;
-
-  background: rgba(10,20,50,0.45);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 0 25px rgba(77,255,204,0.25);
-  border: 1px solid rgba(255,255,255,0.08);
-
-  opacity: 0;
-  animation: leaderboardFadeIn 0.28s forwards;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 100;
+  width: 300px;
+  text-align: left;
 }
 
-@keyframes leaderboardFadeIn {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.88); }
-  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-/* ===========================
-   CLICK FLASH
-=========================== */
+/* FLASH */
 .neon-flash {
   position: absolute;
   width: 40px;
@@ -305,10 +210,24 @@ button:hover,
   background: radial-gradient(circle, rgba(0,255,255,0.9), rgba(0,255,255,0) 70%);
   pointer-events: none;
   animation: neon-flash-anim 0.25s ease-out forwards;
-  z-index: 60;
 }
 
 @keyframes neon-flash-anim {
   0% { transform: scale(0.3); opacity: 1; }
   100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* SNOWFLAKE background */
+.snowflake {
+  position: fixed;
+  top: -10px;
+  color: #dff6ff;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+  animation: snowFall linear infinite;
+}
+
+@keyframes snowFall {
+  to { transform: translateY(110vh); }
 }
