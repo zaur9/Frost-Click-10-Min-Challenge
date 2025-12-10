@@ -20,8 +20,10 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(10, 15, 40, 0.85);
-  backdrop-filter: blur(10px);
+  background:
+    linear-gradient(180deg, rgba(10, 15, 40, 0.7) 0%, rgba(5, 10, 30, 0.9) 100%),
+    url("start-bg.jpg") center/cover no-repeat;
+  backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   justify-content: center;
