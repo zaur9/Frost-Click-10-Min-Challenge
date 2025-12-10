@@ -24,13 +24,12 @@
     <button id="submit-score">Submit Score</button>
     <button id="show-leaderboard">Show Top 10</button>
 
-    <!-- NEW: Pause button -->
+    <!-- Pause -->
     <button id="pause-btn">Pause</button>
 
-    <!-- Pause overlay (hidden by default) -->
     <div id="pause-overlay"></div>
 
-    <!-- Game Over Window -->
+    <!-- Game Over -->
     <div id="game-over">
       <h2 id="result-title">Game Over!</h2>
       <p id="final-score">Your score: 0</p>
@@ -39,15 +38,12 @@
     </div>
   </div>
 
-  <!-- Web3.js -->
-  <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
-
-  <!-- Modules -->
+  <!-- Modules (correct order) -->
   <script type="module" src="config.js"></script>
-  <script type="module" src="web3.js"></script>
   <script type="module" src="game.js"></script>
+  <script type="module" src="web3.js"></script>
 
-  <!-- ====== Snowfall Background ====== -->
+  <!-- Snow background -->
   <script>
     function createSnow() {
       const snow = document.createElement("div");
