@@ -6,11 +6,9 @@ import {
   endGame
 } from './game.js';
 
-// Web3 state
 let web3 = null;
 let contract = null;
 
-// DOM elements
 const connectWalletBtn = document.getElementById('connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
@@ -49,6 +47,7 @@ const contractABI = [
   }
 ];
 
+
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
     alert('Please install MetaMask or Somnia Wallet!');
@@ -56,43 +55,54 @@ async function initWeb3() {
   }
 
   try {
-    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
 
-    if (currentChainId !== CONFIG.SOMNIA_CHAIN_ID) {
-      alert('Please switch your wallet to Somnia Mainnet (Chain ID: 5031).');
+    if (parseInt(chainId, 16) !== CONFIG.SOMNIA_CHAIN_ID) {
+      alert('Please switch to Somnia Mainnet (5031)');
       return false;
     }
 
     web3 = new Web3(window.ethereum);
 
     ethereum.on('accountsChanged', () => {
-      window.location.reload();
+      connectWalletBtn.textContent = "Connect Wallet";
+      submitScoreBtn.style.display = "none";
+      showLeaderboardBtn.style.display = "none";
+      contract = null;
+      setUserAccount(null);
     });
 
     ethereum.on('chainChanged', () => {
-      window.location.reload();
+      connectWalletBtn.textContent = "Connect Wallet";
+      submitScoreBtn.style.display = "none";
+      showLeaderboardBtn.style.display = "none";
+      contract = null;
+      setUserAccount(null);
     });
 
     return true;
 
-  } catch (error) {
-    console.error('Web3 init failed:', error);
-    alert('Could not connect to wallet.');
+  } catch (err) {
+    console.error(err);
     return false;
   }
 }
 
+
+// Connect Wallet
 connectWalletBtn.addEventListener('click', async () => {
   const ready = await initWeb3();
   if (!ready) return;
 
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
+    const accounts = await window.ethereum.request({
+      method: 'eth_requestAccounts'
+    });
 
+    const account = accounts[0];
     setUserAccount(account);
 
-    connectWalletBtn.textContent = account.substring(0, 6) + '...';
+    connectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
 
     contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
 
@@ -104,11 +114,11 @@ connectWalletBtn.addEventListener('click', async () => {
 
   } catch (error) {
     console.error(error);
-    alert('Wallet connection failed');
   }
 });
 
-// submitScoreBtn handler — заменяем текущий
+
+// Submit Score Signed
 submitScoreBtn.addEventListener('click', async () => {
   if (!contract) {
     alert('Connect wallet first');
@@ -117,78 +127,65 @@ submitScoreBtn.addEventListener('click', async () => {
 
   const currentScore = getScore();
   if (currentScore <= 0) {
-    alert('Score is zero');
+    alert('Score must be > 0');
+    return;
+  }
+
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const account = accounts[0];
+
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (parseInt(chainId, 16) !== CONFIG.SOMNIA_CHAIN_ID) {
+    alert('Wrong chain, switch to Somnia Mainnet');
     return;
   }
 
   try {
-    // ensure account
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    const account = accounts[0];
-    if (!account) {
-      alert('Connect wallet first');
-      return;
-    }
-
-    // chain check
-    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-    if (currentChainId !== CONFIG.SOMNIA_CHAIN_ID) {
-      alert('Please stay on Somnia Mainnet.');
-      return;
-    }
-
-    // timestamp (seconds)
     const timestamp = Math.floor(Date.now() / 1000);
-
-    // Build message hash: keccak256(abi.encodePacked(player, score, timestamp, contractAddress, chainId))
-    // Note: soliditySha3 will produce the same as keccak256(abi.encodePacked(...))
-    const chainIdNum = parseInt(CONFIG.SOMNIA_CHAIN_ID, 16);
 
     const messageHash = web3.utils.soliditySha3(
       { t: 'address', v: account },
       { t: 'uint32', v: currentScore },
       { t: 'uint32', v: timestamp },
       { t: 'address', v: CONFIG.CONTRACT_ADDRESS },
-      { t: 'uint256', v: chainIdNum }
+      { t: 'uint256', v: CONFIG.SOMNIA_CHAIN_ID }
     );
 
-    // Request personal_sign. Some wallets expect params order [msg, account], some [account, msg].
-    // web3.eth.personal.sign handles it; using ethereum.request with 'personal_sign' is OK too.
-    // We'll use ethereum.request for broad compatibility:
+    const prefixedHash = web3.utils.soliditySha3(
+      "\x19Ethereum Signed Message:\n32",
+      messageHash
+    );
+
     const signature = await window.ethereum.request({
       method: 'personal_sign',
-      params: [messageHash, account]
+      params: [prefixedHash, account]
     });
 
-    // signature is 65 bytes hex: r(32) + s(32) + v(1)
-    const sig = signature.startsWith('0x') ? signature.slice(2) : signature;
-    const r = '0x' + sig.slice(0, 64);
-    const s = '0x' + sig.slice(64, 128);
+    const sig = signature.startsWith("0x") ? signature.slice(2) : signature;
+
+    const r = "0x" + sig.slice(0, 64);
+    const s = "0x" + sig.slice(64, 128);
     let v = parseInt(sig.slice(128, 130), 16);
-    // EIP-155 style v fix: if v is 0/1 add 27
     if (v < 27) v += 27;
 
-    // Send transaction
     await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
       .send({ from: account });
 
-    alert('✅ Score submitted (signed)!');
-  } catch (error) {
-    console.error('Signed submission failed:', error);
-    alert('Submission failed. Check console for details.');
+    alert("Score submitted!");
+
+  } catch (err) {
+    console.error(err);
+    alert("Error");
   }
 });
 
 
-
+// Leaderboard
 showLeaderboardBtn.addEventListener('click', async () => {
-  if (!contract) {
-    alert('Connect wallet first');
-    return;
-  }
+  if (!contract) return;
 
-  const oldModal = document.getElementById('leaderboard-modal');
-  if (oldModal) oldModal.remove();
+  const prevModal = document.getElementById('leaderboard-modal');
+  if (prevModal) prevModal.remove();
 
   try {
     const leaderboard = await contract.methods.getLeaderboard().call();
@@ -203,40 +200,22 @@ showLeaderboardBtn.addEventListener('click', async () => {
     if (top10.length === 0) {
       html += '<li>No scores yet</li>';
     } else {
-      for (let entry of top10) {
-        const shortAddr = entry.player.substring(0, 6) + '...';
-        html += `<li>${shortAddr}: ${entry.score}</li>`;
+      for (let e of top10) {
+        const addr = e.player.slice(0, 6) + '...' + e.player.slice(-4);
+        html += `<li>${addr}: ${e.score}</li>`;
       }
     }
 
-    html += `</ol>
-      <button id="close-lb" style="margin-top:10px;padding:5px 10px;">Close</button>`;
+    html += `</ol><button id="close-lb">Close</button>`;
 
     const modal = document.createElement('div');
     modal.id = 'leaderboard-modal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(10,20,50,0.95);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      z-index: 100;
-      width: 300px;
-      text-align: left;
-    `;
-
     modal.innerHTML = html;
     document.body.appendChild(modal);
 
-    document.getElementById('close-lb').onclick = () => {
-      modal.remove();
-    };
+    document.getElementById('close-lb').onclick = () => modal.remove();
 
-  } catch (error) {
-    console.error('Leaderboard error:', error);
-    alert('Failed to load leaderboard.');
+  } catch (err) {
+    console.error(err);
   }
 });
