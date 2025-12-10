@@ -337,22 +337,32 @@ function updateMusicButton() {
   if (startMusicToggle) startMusicToggle.textContent = musicEnabled ? 'Music: On' : 'Music: Off';
 }
 
-if (startMusicToggle && bgMusic) {
-  // auto-play on start screen by default
-  musicEnabled = true;
-  updateMusicButton();
-  bgMusic.play().catch(() => {
-    // if blocked by browser, fall back to Off state until user clicks
+function tryPlayMusic(auto = false) {
+  if (!bgMusic) return Promise.resolve();
+  // browsers often allow muted autoplay; unmute after success
+  if (auto) bgMusic.muted = true;
+  return bgMusic.play().then(() => {
+    if (auto) bgMusic.muted = false;
+    musicEnabled = true;
+    updateMusicButton();
+  }).catch(() => {
+    if (auto) bgMusic.muted = false;
     musicEnabled = false;
     updateMusicButton();
   });
+}
+
+if (startMusicToggle && bgMusic) {
+  // auto-play attempt on load
+  musicEnabled = true;
+  updateMusicButton();
+  tryPlayMusic(true);
 
   updateMusicButton();
   startMusicToggle.addEventListener('click', async () => {
     if (!musicEnabled) {
       try {
-        await bgMusic.play();
-        musicEnabled = true;
+        await tryPlayMusic(false);
       } catch (err) {
         console.error('Music play blocked', err);
         musicEnabled = false;
@@ -363,6 +373,17 @@ if (startMusicToggle && bgMusic) {
     }
     updateMusicButton();
   });
+
+  // fallback: first user interaction starts music if autoplay failed
+  const kickstart = () => {
+    if (!musicEnabled) {
+      tryPlayMusic(false);
+    }
+    document.removeEventListener('pointerdown', kickstart);
+    document.removeEventListener('keydown', kickstart);
+  };
+  document.addEventListener('pointerdown', kickstart);
+  document.addEventListener('keydown', kickstart);
 }
 
 
