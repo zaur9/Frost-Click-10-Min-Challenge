@@ -173,18 +173,6 @@ submitScoreBtn.addEventListener('click', async () => {
     let v = parseInt(sig.slice(128, 130), 16);
     if (v < 27) v += 27;
 
-    try {
-      const onchainScore = await fetchCurrentOnChainScore(account);
-      if (currentScore <= onchainScore) {
-        // do nothing, no message
-        return;
-      }
-    } catch (e) {
-      console.error('Failed to fetch on-chain score', e);
-      // do nothing, no message
-      return;
-    }
-
     await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
       .send({ from: account });
 
