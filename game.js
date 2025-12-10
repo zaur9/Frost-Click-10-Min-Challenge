@@ -223,7 +223,7 @@ function gameLoop() {
   if (!isPaused && !isFrozen) {
     if (Math.random() < 0.0125) createObject('🟢', 'toy-green', 80 + Math.random() * 50);
 if (Math.random() < 0.0125) createObject('🟣', 'toy-purple', 80 + Math.random() * 50);
-if (Math.random() < 0.000287) createObject('S', 'somnia', 40 + Math.random() * 30);
+if (Math.random() < 0.000287) createObject('', 'somnia', 40 + Math.random() * 30);
     if (Math.random() < 0.05) createObject('❄️', 'snow', 110 + Math.random() * 90);
     if (Math.random() < 0.05) createObject('💣', 'bomb', 110 + Math.random() * 90);
     if (Math.random() < 0.0035) createObject('🎁', 'gift', 70 + Math.random() * 40);
