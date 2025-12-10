@@ -48,6 +48,8 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
+const startMusicToggle = document.getElementById('start-music-toggle');
+const bgMusic = document.getElementById('bg-music');
 
 // Wallet
 let userAccount = null;
@@ -329,11 +331,39 @@ function startGame() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
+// === MUSIC TOGGLE (start screen) ===
+let musicEnabled = false;
+function updateMusicButton() {
+  if (startMusicToggle) startMusicToggle.textContent = musicEnabled ? 'Music: On' : 'Music: Off';
+}
+
+if (startMusicToggle && bgMusic) {
+  updateMusicButton();
+  startMusicToggle.addEventListener('click', async () => {
+    if (!musicEnabled) {
+      try {
+        await bgMusic.play();
+        musicEnabled = true;
+      } catch (err) {
+        console.error('Music play blocked', err);
+        musicEnabled = false;
+      }
+    } else {
+      bgMusic.pause();
+      musicEnabled = false;
+    }
+    updateMusicButton();
+  });
+}
+
 
 // === START SCREEN ===
 startBtn.addEventListener("click", () => {
   startScreen.style.display = "none";
   pauseBtn.style.display = 'block';
+  if (musicEnabled && bgMusic && bgMusic.paused) {
+    bgMusic.play().catch(() => {});
+  }
   startGame();
 });
 
