@@ -49,16 +49,6 @@ const contractABI = [
   }
 ];
 
-async function fetchCurrentOnChainScore(account) {
-  if (!contract) return 0;
-  const idxPlusOne = await contract.methods.indexPlusOne(account).call();
-  if (idxPlusOne === "0" || idxPlusOne === 0) return 0;
-  const idx = Number(idxPlusOne) - 1;
-  const entry = await contract.methods.leaderboard(idx).call();
-  return Number(entry.score);
-}
-
-
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
     alert('Please install MetaMask or Somnia Wallet!');
@@ -151,19 +141,6 @@ submitScoreBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Prevent tx if not beating own on-chain record (if exists)
-  try {
-    const onchainScore = await fetchCurrentOnChainScore(account);
-    if (currentScore <= onchainScore) {
-      alert(`You need to beat your record (${onchainScore}) to submit.`);
-      return;
-    }
-  } catch (e) {
-    console.error('Failed to fetch on-chain score', e);
-    alert('Cannot check your record now. Try again in a moment.');
-    return;
-  }
-
   const accounts = await window.ethereum.request({ method: 'eth_accounts' });
   const account = accounts[0];
 
@@ -195,6 +172,18 @@ submitScoreBtn.addEventListener('click', async () => {
     const s = "0x" + sig.slice(64, 128);
     let v = parseInt(sig.slice(128, 130), 16);
     if (v < 27) v += 27;
+
+    try {
+      const onchainScore = await fetchCurrentOnChainScore(account);
+      if (currentScore <= onchainScore) {
+        // do nothing, no message
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to fetch on-chain score', e);
+      // do nothing, no message
+      return;
+    }
 
     await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
       .send({ from: account });
