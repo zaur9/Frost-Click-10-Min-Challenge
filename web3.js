@@ -152,9 +152,15 @@ submitScoreBtn.addEventListener('click', async () => {
   }
 
   // Prevent tx if not beating own on-chain record (if exists)
-  const onchainScore = await fetchCurrentOnChainScore(account);
-  if (currentScore <= onchainScore) {
-    alert(`Need to beat your record: ${onchainScore}`);
+  try {
+    const onchainScore = await fetchCurrentOnChainScore(account);
+    if (currentScore <= onchainScore) {
+      alert(`You need to beat your record (${onchainScore}) to submit.`);
+      return;
+    }
+  } catch (e) {
+    console.error('Failed to fetch on-chain score', e);
+    alert('Cannot check your record now. Try again in a moment.');
     return;
   }
 
