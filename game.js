@@ -96,9 +96,10 @@ game.addEventListener('click', (e) => {
     const obj = objects[i];
     const rect = obj.el.getBoundingClientRect();
 
+    const paddingBottom = obj.type === 'bomb' ? 0 : HIT_PADDING_BOTTOM;
     const hit =
       x >= rect.left && x <= rect.right &&
-      y >= rect.top && y <= rect.bottom + HIT_PADDING_BOTTOM;
+      y >= rect.top && y <= rect.bottom + paddingBottom;
 
     if (!hit) continue;
 
