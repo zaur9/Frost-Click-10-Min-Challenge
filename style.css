@@ -70,12 +70,6 @@ body {
   font-size: 14px;
 }
 
-#start-music-toggle {
-  width: 160px;
-  padding: 10px 14px;
-  font-size: 14px;
-}
-
 /* GAME */
 #game {
   position: relative;
@@ -264,7 +258,6 @@ body {
 #start-btn,
 #start-connect-wallet,
 #start-show-leaderboard,
-#start-music-toggle,
 #pause-btn,
 #connect-wallet,
 #submit-score,
@@ -282,7 +275,6 @@ body {
 #start-btn:hover,
 #start-connect-wallet:hover,
 #start-show-leaderboard:hover,
-#start-music-toggle:hover,
 #pause-btn:hover,
 #connect-wallet:hover,
 #submit-score:hover,
