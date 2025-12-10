@@ -285,37 +285,13 @@ body {
 
 /* REPLACE .object.somnia in style.css */
 .object.somnia {
-  width: 50px !important;
-  height: 50px !important;
-  border-radius: 50%;
-  background: radial-gradient(circle at 55% 45%, #4d9fff 0%, #7c3aed 60%, #a855f7 100%);
-  position: relative;
+  width: 64px !important;
+  height: 64px !important;
   font-size: 0;
-  box-shadow: 0 0 20px rgba(77,159,255,0.9);
-}
-
-.object.somnia::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 32px;
-  height: 38px;
-  background: radial-gradient(circle at 40% 30%, #3b82f6 0%, #1e40af 80%);
-  border-radius: 60% 80% 40% 70% / 40% 25% 75% 60%;
-  clip-path: polygon(15% 0%, 95% 35%, 85% 100%, 5% 65%);
-  transform: rotate(12deg);
-}
-
-.object.somnia::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: -10px;
-  width: 32px;
-  height: 38px;
-  background: radial-gradient(circle at 60% 70%, #c084fc 0%, #7c3aed 80%);
-  border-radius: 70% 40% 80% 60% / 60% 75% 25% 40%;
-  clip-path: polygon(5% 0%, 85% 35%, 95% 100%, 15% 65%);
-  transform: rotate(-12deg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: 0 0 18px rgba(90, 150, 255, 0.8);
+  /* inline SVG to match provided Somnia mark */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='g1' x1='0%' y1='0%' x2='0%' y2='100%'><stop offset='0%' stop-color='%2347d5ff'/><stop offset='100%' stop-color='%234f46e5'/></linearGradient><linearGradient id='g2' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='100%' stop-color='%23ec4899'/></linearGradient><linearGradient id='g3' x1='0%' y1='100%' x2='0%' y2='0%'><stop offset='0%' stop-color='%23a855f7'/><stop offset='100%' stop-color='%23ec4899'/></linearGradient><linearGradient id='g4' x1='100%' y1='0%' x2='0%' y2='100%'><stop offset='0%' stop-color='%2347d5ff'/><stop offset='100%' stop-color='%2322d3ee'/></linearGradient></defs><rect width='120' height='120' rx='60' fill='%23000'/><g transform='translate(60 60)'><path d='M0 -55 C22 -42 32 -18 0 55 C-32 -18 -22 -42 0 -55 Z' fill='url(%23g1)'/><path d='M0 -55 C22 -42 32 -18 0 55 C-32 -18 -22 -42 0 -55 Z' fill='url(%23g2)' transform='rotate(90)'/><path d='M0 -55 C22 -42 32 -18 0 55 C-32 -18 -22 -42 0 -55 Z' fill='url(%23g3)' transform='rotate(180)'/><path d='M0 -55 C22 -42 32 -18 0 55 C-32 -18 -22 -42 0 -55 Z' fill='url(%23g4)' transform='rotate(270)'/><path d='M-18 -4 L0 -28 L18 -4 L32 -2 L14 12 L20 30 L0 20 L-20 30 L-14 12 L-32 -2 Z' fill='%23000'/></g></svg>");
 }
