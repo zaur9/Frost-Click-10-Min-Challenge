@@ -61,6 +61,8 @@ function createObject(emoji, type, speed) {
 
   const obj = document.createElement('div');
   obj.className = 'object';
+  // allow CSS variants (somnia, toys, bombs, etc.)
+  if (type) obj.classList.add(type);
   if (type === 'bomb') obj.classList.add('bomb');
 
   obj.textContent = emoji;
@@ -326,3 +328,4 @@ restartBtn.addEventListener('click', () => {
   gameOverEl.style.display = 'none';
   startGame();
 });
+
