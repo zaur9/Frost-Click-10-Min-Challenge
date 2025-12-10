@@ -48,6 +48,7 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
+const pbScoreEl = document.getElementById('pb-score');
 
 // Wallet
 let userAccount = null;
@@ -272,6 +273,41 @@ function spawnTick() {
   if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 60 + Math.random() * 30);
 }
 
+async function updatePersonalBest() {
+  if (!window.contract || !window.ethereum || !window.userAccount) {
+    pbScoreEl.textContent = 'Best: 0';
+    return;
+  }
+  try {
+    const idxPlusOne = await window.contract.methods.indexPlusOne(window.userAccount).call();
+    if (idxPlusOne === '0' || idxPlusOne === 0) {
+      pbScoreEl.textContent = 'Best: 0';
+    } else {
+      const idx = Number(idxPlusOne) - 1;
+      const entry = await window.contract.methods.leaderboard(idx).call();
+      pbScoreEl.textContent = 'Best: ' + entry.score;
+    }
+  } catch (e) {
+    pbScoreEl.textContent = 'Best: ?';
+  }
+}
+
+// при старте игры или подключении кошелька
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', updatePersonalBest);
+  window.ethereum.on('chainChanged', updatePersonalBest);
+}
+if (window.setUserAccount) {
+  const origSet = window.setUserAccount;
+  window.setUserAccount = function(addr) {
+    origSet(addr);
+    updatePersonalBest();
+  };
+}
+if (typeof window.contract !== 'undefined') {
+  updatePersonalBest();
+}
+
 
 // === START GAME ===
 function startGame() {
@@ -327,6 +363,7 @@ function startGame() {
 
   spawnIntervalId = setInterval(spawnTick, SPAWN_TICK_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
+  updatePersonalBest();
 }
 
 // === START SCREEN ===
