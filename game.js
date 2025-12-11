@@ -12,6 +12,9 @@ let startTime = 0;
 let timerInterval = null;
 let spawnIntervalId = null;
 
+// frame timing
+let lastFrameTime = null;
+
 // click hitbox padding (only bottom) to make fast objects easier to catch
 const HIT_PADDING_BOTTOM = 12;
 const HIT_PADDING_SNOW_TOP = 12;
@@ -52,19 +55,21 @@ const pbScoreEl = document.getElementById('pb-score');
 
 // Wallet
 let userAccount = null;
-export const setUserAccount = addr => userAccount = addr;
+export function setUserAccount(addr) {
+  userAccount = addr;
+  // при смене аккаунта обновляем PB
+  updatePersonalBest();
+}
 
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
 
 export { updateScore, endGame };
 
-
 // === SCORE ===
 function updateScore() {
-  scoreEl.textContent = `Score: ${score}`;
+  if (scoreEl) scoreEl.textContent = `Score: ${score}`;
 }
-
 
 // === TIME ===
 function formatTime(ms) {
@@ -73,7 +78,6 @@ function formatTime(ms) {
   const sec = totalSec % 60;
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
-
 
 // === CREATE OBJECT ===
 function createObject(emoji, type, speed) {
@@ -85,16 +89,27 @@ function createObject(emoji, type, speed) {
   if (type) obj.classList.add(type);
   if (type === 'bomb') obj.classList.add('bomb');
 
-  obj.textContent = emoji;
+  // Ensure somnia has immediate hitbox even if textContent empty / CSS not applied yet
+  if (type === 'somnia') {
+    obj.style.width = '32px';
+    obj.style.height = '32px';
+    obj.style.display = 'block';
+    // keep empty visual content (background image in CSS will render)
+    obj.textContent = ' ';
+  } else {
+    obj.textContent = emoji;
+  }
 
+  // set initial horizontal pos (centered via translateX(-50%))
   obj.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+  // start above the top; actual vertical position tracked in obj.y
   obj.style.transform = `translateX(-50%) translateY(-50px)`;
 
   game.appendChild(obj);
 
+  // store speed in px per second (existing values are treated as px/sec)
   objects.push({ el: obj, type, y: -50, speed });
 }
-
 
 // === CLICK HANDLING ===
 game.addEventListener('click', (e) => {
@@ -138,40 +153,39 @@ game.addEventListener('click', (e) => {
     game.appendChild(flash);
     setTimeout(() => flash.remove(), 250);
 
-    // FREEZE BONUS
+    // FREEZE BONUS — (НЕ изменяем по требованию пользователя)
     if (isFrozen) {
-  if (type === 'snow') score += 1;
-  else if (type === 'bomb') score += 3;
-  else if (type === 'gift') score += 5;
-  else if (type === 'ice') score += 2;
-  else if (type === 'toy-green' || type === 'toy-purple') score += 2;
-  else if (type === 'somnia') score += 100;
-  updateScore();
-  return;
-}
+      if (type === 'snow') score += 1;
+      else if (type === 'bomb') score += 3;
+      else if (type === 'gift') score += 5;
+      else if (type === 'ice') score += 2;
+      else if (type === 'toy-green' || type === 'toy-purple') score += 2;
+      else if (type === 'somnia') score += 100;
+      updateScore();
+      return;
+    }
 
     if (type === 'bomb') {
       endGame(false);
       return;
     }
 
-   if (type === 'ice') {
-  activateFreeze();
-  score += 2;
-} else if (type === 'toy-green' || type === 'toy-purple') {
-  score += 2;
-} else if (type === 'somnia') {
-  score += 100;
-} else if (type === 'gift') {
-  score += 5;
-} else {
-  score += 1;
-}
-updateScore();
-return;
+    if (type === 'ice') {
+      activateFreeze();
+      score += 2;
+    } else if (type === 'toy-green' || type === 'toy-purple') {
+      score += 2;
+    } else if (type === 'somnia') {
+      score += 100;
+    } else if (type === 'gift') {
+      score += 5;
+    } else {
+      score += 1;
+    }
+    updateScore();
+    return;
   }
 });
-
 
 // === FREEZE ===
 function activateFreeze() {
@@ -215,7 +229,6 @@ function activateFreeze() {
   }, 1000);
 }
 
-
 // === END GAME ===
 function endGame(isWin) {
   gameActive = false;
@@ -235,16 +248,21 @@ function endGame(isWin) {
   showLeaderboardBtn.style.display = userAccount ? 'block' : 'none';
 }
 
-
 // === GAME LOOP ===
-function gameLoop() {
+function gameLoop(timestamp) {
   if (!gameActive || isPaused) return;
+
+  if (lastFrameTime === null) lastFrameTime = timestamp;
+  const dt = (timestamp - lastFrameTime) / 1000; // seconds
+  lastFrameTime = timestamp;
 
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
 
     if (!isFrozen) {
-      obj.y += obj.speed * 0.016;
+      // speed is px/second, so multiply by dt
+      obj.y += obj.speed * dt;
+      // preserve translateX(-50%) and update translateY only
       obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
       if (obj.y > window.innerHeight) {
@@ -273,13 +291,14 @@ function spawnTick() {
   if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 60 + Math.random() * 30);
 }
 
-async function updatePersonalBest() {
-  if (!window.contract || !window.ethereum || !window.userAccount) {
-    pbScoreEl.textContent = 'Best: 0';
+export async function updatePersonalBest() {
+  if (!window.contract || !window.ethereum || !userAccount) {
+    if (pbScoreEl) pbScoreEl.textContent = 'Best: 0';
     return;
   }
   try {
-    const idxPlusOne = await window.contract.methods.indexPlusOne(window.userAccount).call();
+    // indexPlusOne should exist in contract ABI (web3.js ensures ABI includes it)
+    const idxPlusOne = await window.contract.methods.indexPlusOne(userAccount).call();
     if (idxPlusOne === '0' || idxPlusOne === 0) {
       pbScoreEl.textContent = 'Best: 0';
     } else {
@@ -297,17 +316,10 @@ if (window.ethereum) {
   window.ethereum.on('accountsChanged', updatePersonalBest);
   window.ethereum.on('chainChanged', updatePersonalBest);
 }
-if (window.setUserAccount) {
-  const origSet = window.setUserAccount;
-  window.setUserAccount = function(addr) {
-    origSet(addr);
-    updatePersonalBest();
-  };
-}
+
 if (typeof window.contract !== 'undefined') {
   updatePersonalBest();
 }
-
 
 // === START GAME ===
 function startGame() {
@@ -343,6 +355,8 @@ function startGame() {
 
   startTime = Date.now();
 
+  lastFrameTime = null;
+
   // build somnia schedule: first drop at 58s, then every 58s, total 10
   somniaSchedule = Array.from({ length: SOMNIA_TOTAL }, (_, i) => (i + 1) * SOMNIA_INTERVAL_MS);
   nextSomniaIndex = 0;
@@ -373,7 +387,6 @@ startBtn.addEventListener("click", () => {
   startGame();
 });
 
-
 // === PAUSE ===
 pauseBtn.addEventListener("click", () => {
   if (!gameActive) return;
@@ -392,6 +405,8 @@ pauseBtn.addEventListener("click", () => {
       pausedAccum += Date.now() - pauseStart;
       pauseStart = null;
     }
+    // reset lastFrameTime so dt doesn't spike
+    lastFrameTime = null;
     gameLoopId = requestAnimationFrame(gameLoop);
   }
 });
@@ -400,7 +415,6 @@ pauseBtn.addEventListener("click", () => {
 document.getElementById("resume-btn").addEventListener("click", () => {
   pauseBtn.click(); // просто эмулируем клик по основной кнопке паузы
 });
-
 
 // === RESTART ===
 restartBtn.addEventListener('click', () => {
