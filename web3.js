@@ -15,6 +15,7 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 
+// ABI расширен: добавлены indexPlusOne и leaderboard для совместимости с game.js
 const contractABI = [
   {
     "inputs": [
@@ -29,6 +30,7 @@ const contractABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   },
+
   {
     "inputs": [],
     "name": "getLeaderboard",
@@ -46,8 +48,66 @@ const contractABI = [
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "indexPlusOne",
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "name": "leaderboard",
+    "outputs": [
+      { "internalType": "address", "name": "player", "type": "address" },
+      { "internalType": "uint32", "name": "score", "type": "uint32" },
+      { "internalType": "uint32", "name": "timestamp", "type": "uint32" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [],
+    "name": "entriesCount",
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [],
+    "name": "MAX_SCORE",
+    "outputs": [
+      { "internalType": "uint32", "name": "", "type": "uint32" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "", "type": "bytes32" }
+    ],
+    "name": "usedMessages",
+    "outputs": [
+      { "internalType": "bool", "name": "", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
-];
+]
 
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
@@ -65,22 +125,40 @@ async function initWeb3() {
 
     web3 = new Web3(window.ethereum);
 
-    ethereum.on('accountsChanged', () => {
-      connectWalletBtn.textContent = "Connect Wallet";
-      if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
-      submitScoreBtn.style.display = "none";
-      showLeaderboardBtn.style.display = "none";
+    // create contract instance once web3 is ready
+    try {
+      contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
+      window.contract = contract;
+    } catch (e) {
+      console.error('Contract init failed', e);
       contract = null;
-      setUserAccount(null);
+      window.contract = null;
+    }
+
+    // handle accounts/chain changes with payloads where possible
+    ethereum.on('accountsChanged', (accounts) => {
+      const addr = (accounts && accounts.length) ? accounts[0] : null;
+      if (addr) {
+        connectWalletBtn.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
+        if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
+      } else {
+        connectWalletBtn.textContent = "Connect Wallet";
+        if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
+        submitScoreBtn.style.display = "none";
+        showLeaderboardBtn.style.display = "none";
+      }
+      setUserAccount(addr);
     });
 
-    ethereum.on('chainChanged', () => {
+    ethereum.on('chainChanged', (chainIdHex) => {
       connectWalletBtn.textContent = "Connect Wallet";
       if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
       submitScoreBtn.style.display = "none";
       showLeaderboardBtn.style.display = "none";
       contract = null;
+      window.contract = null;
       setUserAccount(null);
+      // optional: reload page or re-init
     });
 
     return true;
@@ -109,9 +187,17 @@ async function handleConnectWallet() {
       startConnectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
     }
 
-    contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
-    window.contract = contract;
-    window.userAccount = account;
+    // ensure contract instance exists
+    if (!contract) {
+      try {
+        contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
+        window.contract = contract;
+      } catch (e) {
+        console.error('Contract init failed', e);
+        contract = null;
+        window.contract = null;
+      }
+    }
 
     showLeaderboardBtn.style.display = 'block';
     if (startShowLeaderboardBtn) startShowLeaderboardBtn.style.display = 'block';
@@ -189,7 +275,10 @@ submitScoreBtn.addEventListener('click', async () => {
 
 // Leaderboard
 async function handleShowLeaderboard() {
-  if (!contract) return;
+  if (!contract) {
+    alert('Connect wallet first');
+    return;
+  }
 
   const prevModal = document.getElementById('leaderboard-modal');
   if (prevModal) prevModal.remove();
@@ -202,7 +291,7 @@ async function handleShowLeaderboard() {
       .sort((a, b) => Number(b.score) - Number(a.score))
       .slice(0, 10);
 
-    let html = '<h3>🏆 Frost Click Top 10</h3><ol>';
+    let html = '<h3>Frost Click Top 10</h3><ol>';
 
     if (top10.length === 0) {
       html += '<li>No scores yet</li>';
@@ -224,6 +313,7 @@ async function handleShowLeaderboard() {
 
   } catch (err) {
     console.error(err);
+    alert('Error fetching leaderboard');
   }
 }
 
