@@ -289,9 +289,9 @@ async function handleShowLeaderboard() {
     const top10 = leaderboard
       .filter(e => e.player !== '0x0000000000000000000000000000000000000000' && Number(e.score) > 0)
       .sort((a, b) => Number(b.score) - Number(a.score))
-      .slice(0, 10);
+      .slice(0, 50);
 
-    let html = '<h3>Frost Click Top 10</h3><ol>';
+    let html = '<h3>Frost Click Top 50</h3><ol>';
 
     if (top10.length === 0) {
       html += '<li>No scores yet</li>';
