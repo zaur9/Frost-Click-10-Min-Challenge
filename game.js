@@ -326,9 +326,9 @@ function spawnTick() {
     nextSomniaIndex++;
   }
 
-  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 130 + Math.random() * 70); // max 220
-  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 130 + Math.random() * 90); // max 220
-  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 110 + Math.random() * 60); // max 160
+  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70); // max 220
+  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 150 + Math.random() * 90); // max 220
+  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 120 + Math.random() * 60); // max 160
   if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 90 + Math.random() * 30);
 }
 
