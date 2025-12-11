@@ -1,5 +1,46 @@
 import { CONFIG } from './config.js';
 
+// === MUSIC: new functionality only ===
+// (added without modifying existing functions)
+const bgMusic = typeof document !== 'undefined' ? document.getElementById("bg-music") : null;
+const musicToggleStart = typeof document !== 'undefined' ? document.getElementById("music-toggle-start") : null;
+const musicToggleGame = typeof document !== 'undefined' ? document.getElementById("music-toggle-game") : null;
+
+let musicEnabled = false;
+
+function updateMusicButtons() {
+  const label = musicEnabled ? "Music: ON" : "Music: OFF";
+  if (musicToggleStart) musicToggleStart.textContent = label;
+  if (musicToggleGame) musicToggleGame.textContent = label;
+}
+
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+
+  try {
+    if (musicEnabled) {
+      if (bgMusic) {
+        // comfortable default volume
+        bgMusic.volume = 0.45;
+        // try to play; user gesture required in some browsers — errors are caught silently
+        bgMusic.play().catch(() => {});
+      }
+    } else {
+      if (bgMusic) bgMusic.pause();
+    }
+  } catch (e) {
+    // silent
+  }
+
+  updateMusicButtons();
+}
+
+if (musicToggleStart) musicToggleStart.addEventListener("click", toggleMusic);
+if (musicToggleGame) musicToggleGame.addEventListener("click", toggleMusic);
+updateMusicButtons();
+// === end of MUSIC block ===
+
+
 // === GLOBAL ===
 let score = 0;
 let gameActive = false;
