@@ -337,7 +337,7 @@ if (now - lastIceSpawn >= ICE_INTERVAL) {
   }
 
   if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70); // max 230
-  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 150 + Math.random() * 90); // max 230
+  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 160 + Math.random() * 90); // max 250
   if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 120 + Math.random() * 60); // max 180
 }
 
