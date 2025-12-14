@@ -71,6 +71,9 @@ const SOMNIA_TOTAL = 10;
 let somniaSchedule = [];
 let nextSomniaIndex = 0;
 
+let lastIceSpawn = 0;
+const ICE_INTERVAL = 45 * 1000; // ровно 45 секунд
+
 // Time-based spawn settings
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
 const SPAWN_CHANCE_SNOW = 0.60;  // approx 3/s (0.45 * 6.7)
@@ -320,6 +323,13 @@ function gameLoop(timestamp) {
 function spawnTick() {
   if (!gameActive || isPaused || isFrozen) return;
 
+  const now = Date.now();
+
+if (now - lastIceSpawn >= ICE_INTERVAL) {
+  createObject('🧊', 'ice', 70);
+  lastIceSpawn = now;
+}
+
   const elapsed = Date.now() - startTime - pausedAccum;
   if (nextSomniaIndex < somniaSchedule.length && elapsed >= somniaSchedule[nextSomniaIndex]) {
     createObject('', 'somnia', 50 + Math.random() * 20);
@@ -329,7 +339,6 @@ function spawnTick() {
   if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70); // max 230
   if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 150 + Math.random() * 90); // max 230
   if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 120 + Math.random() * 60); // max 180
-  if (Math.random() < SPAWN_CHANCE_ICE) createObject('🧊', 'ice', 130 + Math.random() * 30);
 }
 
 export async function updatePersonalBest() {
