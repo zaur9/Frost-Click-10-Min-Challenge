@@ -194,7 +194,7 @@ game.addEventListener('click', (e) => {
     game.appendChild(flash);
     setTimeout(() => flash.remove(), 250);
 
-    // FREEZE BONUS — (НЕ изменяем по требованию пользователя)
+    // FREEZE BONUS
     if (isFrozen) {
       if (type === 'snow') score += 1;
       else if (type === 'bomb') score += 3;
