@@ -71,11 +71,8 @@ const SOMNIA_TOTAL = 10;
 let somniaSchedule = [];
 let nextSomniaIndex = 0;
 
-// Ice schedule
-const ICE_INTERVAL_MS = 45_000;
-const ICE_TOTAL = 13;
-let iceSchedule = [];
-let nextIceIndex = 0;
+let lastIceSpawn = 0;
+const ICE_INTERVAL = 45 * 1000; // ровно 45 секунд
 
 // Time-based spawn settings
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
@@ -328,9 +325,9 @@ function spawnTick() {
 
   const now = Date.now();
 
-if (nextIceIndex < iceSchedule.length && elapsed >= iceSchedule[nextIceIndex]) {
+if (now - lastIceSpawn >= ICE_INTERVAL) {
   createObject('🧊', 'ice', 70);
-  nextIceIndex++;
+  lastIceSpawn = now;
 }
 
   const elapsed = Date.now() - startTime - pausedAccum;
@@ -414,9 +411,6 @@ function startGame() {
   somniaSchedule = Array.from({ length: SOMNIA_TOTAL }, (_, i) => (i + 1) * SOMNIA_INTERVAL_MS);
   nextSomniaIndex = 0;
 
-  iceSchedule = Array.from({ length: ICE_TOTAL }, (_, i) => (i + 1) * ICE_INTERVAL_MS);
-nextIceIndex = 0;
-  
   timerInterval = setInterval(() => {
     if (isPaused) return;
 
