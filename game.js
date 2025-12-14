@@ -326,7 +326,7 @@ function spawnTick() {
   const now = Date.now();
 
 if (now - lastIceSpawn >= ICE_INTERVAL) {
-  createObject('🧊', 'ice', 70);
+  createObject('🧊', 'ice', 80);
   lastIceSpawn = now;
 }
 
@@ -405,6 +405,8 @@ function startGame() {
 
   startTime = Date.now();
 
+  lastIceSpawn = startTime;
+  
   lastFrameTime = null;
 
   // build somnia schedule: first drop at 58s, then every 58s, total 10
