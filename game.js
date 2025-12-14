@@ -76,7 +76,7 @@ const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
 const SPAWN_CHANCE_SNOW = 0.60;  // approx 3/s (0.45 * 6.7)
 const SPAWN_CHANCE_BOMB = 0.60;  // approx 3/s
 const SPAWN_CHANCE_GIFT = 0.18; // ~1.2/s (0.18 * 6.7)
-const SPAWN_CHANCE_ICE = 0.0025;  // ~0.15/s
+const SPAWN_CHANCE_ICE = 0.0033;  // ~0.15/s
 
 // DOM
 const game = document.getElementById('game');
