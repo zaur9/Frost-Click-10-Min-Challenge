@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { setUserAccount } from './game.js';
+import { setUserAccount, getScore } from './game.js';
 
 let web3 = null;
 let contract = null;
@@ -139,6 +139,28 @@ function shortenAddress(addr) {
   return addr.slice(0, 6) + '...' + addr.slice(-4);
 }
 
+function resetWalletButtonLabels() {
+  if (connectWalletBtn) connectWalletBtn.textContent = 'Connect Wallet';
+  if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = 'Connect Wallet';
+}
+
+function updateWalletButtonLabelsForActiveNetwork(addr) {
+  if (!addr || !activeNetworkCfg) {
+    resetWalletButtonLabels();
+    return;
+  }
+
+  if (activeNetworkCfg.key === 'ape') {
+    if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = shortenAddress(addr);
+    if (connectWalletBtn) connectWalletBtn.textContent = 'Connect Wallet';
+  } else if (activeNetworkCfg.key === 'somnia') {
+    if (connectWalletBtn) connectWalletBtn.textContent = shortenAddress(addr);
+    if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = 'Connect Wallet';
+  } else {
+    resetWalletButtonLabels();
+  }
+}
+
 function getValidEntries(entries) {
   return entries
     .filter(e => e.player !== '0x0000000000000000000000000000000000000000' && Number(e.score) > 0)
@@ -260,21 +282,13 @@ async function initWeb3(targetChainId = null) {
     if (!walletListenersAttached) {
       ethereum.on('accountsChanged', (accounts) => {
         const addr = (accounts && accounts.length) ? accounts[0] : null;
-        if (addr) {
-          connectWalletBtn.textContent = shortenAddress(addr);
-          if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = shortenAddress(addr);
-          if (startConnectWalletBtn) startConnectWalletBtn.textContent = shortenAddress(addr);
-        } else {
-          connectWalletBtn.textContent = "Connect Wallet";
-          if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
-          if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
-        }
+        updateWalletButtonLabelsForActiveNetwork(addr);
+        if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr ? shortenAddress(addr) : 'Connect Wallet';
         setUserAccount(addr);
       });
 
       ethereum.on('chainChanged', () => {
-        connectWalletBtn.textContent = "Connect Wallet";
-        if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
+        resetWalletButtonLabels();
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
         contract = null;
         window.contract = null;
@@ -306,10 +320,7 @@ async function handleConnectWallet(targetChainId) {
     const account = accounts[0];
     setUserAccount(account);
 
-    connectWalletBtn.textContent = shortenAddress(account);
-    if (apeConnectWalletBtn) {
-      apeConnectWalletBtn.textContent = shortenAddress(account);
-    }
+    updateWalletButtonLabelsForActiveNetwork(account);
     if (startConnectWalletBtn) {
       startConnectWalletBtn.textContent = shortenAddress(account);
     }
@@ -332,6 +343,64 @@ async function handleConnectWallet(targetChainId) {
   }
 }
 
+async function submitCurrentScore() {
+  if (!contract || !web3) {
+    alert('Connect wallet first');
+    return;
+  }
+
+  const currentScore = getScore();
+  if (currentScore <= 0) {
+    alert('Score must be > 0');
+    return;
+  }
+
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const account = accounts[0];
+  if (!account) {
+    alert('Connect wallet first');
+    return;
+  }
+
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  const chainIdNum = parseInt(chainId, 16);
+  const networkCfg = getNetworkConfigByChainId(chainIdNum);
+  if (!networkCfg) {
+    alert(`Wrong chain, switch to ${getReadableChainNames()}`);
+    return;
+  }
+
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    const messageHash = web3.utils.soliditySha3(
+      { t: 'address', v: account },
+      { t: 'uint32', v: currentScore },
+      { t: 'uint32', v: timestamp },
+      { t: 'address', v: networkCfg.contractAddress },
+      { t: 'uint256', v: networkCfg.chainId }
+    );
+
+    const signature = await window.ethereum.request({
+      method: 'personal_sign',
+      params: [messageHash, account]
+    });
+
+    const sig = signature.startsWith("0x") ? signature.slice(2) : signature;
+    const r = "0x" + sig.slice(0, 64);
+    const s = "0x" + sig.slice(64, 128);
+    let v = parseInt(sig.slice(128, 130), 16);
+    if (v < 27) v += 27;
+
+    await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s).send({ from: account });
+    alert("Score submitted!");
+    await refreshBattleTotals();
+  } catch (err) {
+    console.error(err);
+    alert("Error");
+  }
+}
+
 // Connect Wallet buttons by side: left=Ape, right=Somnia
 if (connectWalletBtn) {
   connectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
@@ -342,6 +411,7 @@ if (apeConnectWalletBtn) {
 if (startConnectWalletBtn) {
   startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
 }
+window.addEventListener('submit-score-request', submitCurrentScore);
 
 
 // Leaderboard
