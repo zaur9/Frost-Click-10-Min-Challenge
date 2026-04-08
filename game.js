@@ -96,6 +96,7 @@ const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 const pbScoreEl = document.getElementById('pb-score');
+const PLAYFIELD_TOP_OFFSET = 78;
 
 function getPlayfieldBounds() {
   const side = window.innerWidth * 0.28;
@@ -139,6 +140,8 @@ function createObject(emoji, type, speed) {
   // allow CSS variants (somnia, toys, bombs, etc.)
   if (type) obj.classList.add(type);
   if (type === 'bomb') obj.classList.add('bomb');
+
+  obj.style.top = `${PLAYFIELD_TOP_OFFSET}px`;
 
   // Ensure somnia has immediate hitbox even if textContent empty / CSS not applied yet
   if (type === 'somnia') {
