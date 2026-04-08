@@ -8,12 +8,15 @@ import {
 
 let web3 = null;
 let contract = null;
+let walletListenersAttached = false;
 
 const connectWalletBtn = document.getElementById('connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
+const apeTotalEl = document.getElementById('ape-total');
+const somniaTotalEl = document.getElementById('somnia-total');
 
 // ABI расширен: добавлены indexPlusOne и leaderboard для совместимости с game.js
 const contractABI = [
@@ -109,6 +112,91 @@ const contractABI = [
   }
 ]
 
+function getNetworkConfigByChainId(chainIdNum) {
+  if (chainIdNum === CONFIG.SOMNIA_CHAIN_ID) {
+    return {
+      key: 'somnia',
+      name: 'Somnia',
+      chainId: CONFIG.SOMNIA_CHAIN_ID,
+      contractAddress: CONFIG.CONTRACT_ADDRESS
+    };
+  }
+
+  if (chainIdNum === CONFIG.APECHAIN_CHAIN_ID) {
+    return {
+      key: 'ape',
+      name: 'ApeChain',
+      chainId: CONFIG.APECHAIN_CHAIN_ID,
+      contractAddress: CONFIG.APECHAIN_CONTRACT_ADDRESS
+    };
+  }
+
+  return null;
+}
+
+function getReadableChainNames() {
+  return `Somnia (${CONFIG.SOMNIA_CHAIN_ID}) or ApeChain (${CONFIG.APECHAIN_CHAIN_ID})`;
+}
+
+function shortenAddress(addr) {
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function getValidEntries(entries) {
+  return entries
+    .filter(e => e.player !== '0x0000000000000000000000000000000000000000' && Number(e.score) > 0)
+    .sort((a, b) => Number(b.score) - Number(a.score));
+}
+
+function setTeamTotal(el, title, value, isError = false) {
+  if (!el) return;
+  if (isError) {
+    el.textContent = `${title}: N/A`;
+    return;
+  }
+  el.textContent = `${title}: ${value}`;
+}
+
+async function fetchLeaderboardViaRpc(rpcUrl, contractAddress) {
+  if (!rpcUrl || !contractAddress || /^0x0{40}$/i.test(contractAddress)) {
+    throw new Error('Missing RPC URL or contract address');
+  }
+
+  const readWeb3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
+  const readContract = new readWeb3.eth.Contract(contractABI, contractAddress);
+  const leaderboard = await readContract.methods.getLeaderboard().call();
+  const sorted = getValidEntries(leaderboard);
+  const total = sorted.reduce((sum, item) => sum + Number(item.score), 0);
+  return {
+    top10: sorted.slice(0, 10),
+    total
+  };
+}
+
+async function refreshBattleTotals() {
+  try {
+    const [apeData, somniaData] = await Promise.allSettled([
+      fetchLeaderboardViaRpc(CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS),
+      fetchLeaderboardViaRpc(CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS)
+    ]);
+
+    if (apeData.status === 'fulfilled') {
+      setTeamTotal(apeTotalEl, 'Total', apeData.value.total, false);
+    } else {
+      setTeamTotal(apeTotalEl, 'Total', 0, true);
+    }
+
+    if (somniaData.status === 'fulfilled') {
+      setTeamTotal(somniaTotalEl, 'Total', somniaData.value.total, false);
+    } else {
+      setTeamTotal(somniaTotalEl, 'Total', 0, true);
+    }
+  } catch (err) {
+    setTeamTotal(apeTotalEl, 'Total', 0, true);
+    setTeamTotal(somniaTotalEl, 'Total', 0, true);
+  }
+}
+
 async function initWeb3() {
   if (typeof window.ethereum === 'undefined') {
     alert('Please install MetaMask or Somnia Wallet!');
@@ -118,8 +206,10 @@ async function initWeb3() {
   try {
     const chainId = await window.ethereum.request({ method: 'eth_chainId' });
 
-    if (parseInt(chainId, 16) !== CONFIG.SOMNIA_CHAIN_ID) {
-      alert('Please switch to Somnia Mainnet (5031)');
+    const chainIdNum = parseInt(chainId, 16);
+    const networkCfg = getNetworkConfigByChainId(chainIdNum);
+    if (!networkCfg) {
+      alert(`Please switch to ${getReadableChainNames()}`);
       return false;
     }
 
@@ -127,7 +217,7 @@ async function initWeb3() {
 
     // create contract instance once web3 is ready
     try {
-      contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
+      contract = new web3.eth.Contract(contractABI, networkCfg.contractAddress);
       window.contract = contract;
     } catch (e) {
       console.error('Contract init failed', e);
@@ -135,31 +225,33 @@ async function initWeb3() {
       window.contract = null;
     }
 
-    // handle accounts/chain changes with payloads where possible
-    ethereum.on('accountsChanged', (accounts) => {
-      const addr = (accounts && accounts.length) ? accounts[0] : null;
-      if (addr) {
-        connectWalletBtn.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
-        if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
-      } else {
+    if (!walletListenersAttached) {
+      ethereum.on('accountsChanged', (accounts) => {
+        const addr = (accounts && accounts.length) ? accounts[0] : null;
+        if (addr) {
+          connectWalletBtn.textContent = shortenAddress(addr);
+          if (startConnectWalletBtn) startConnectWalletBtn.textContent = shortenAddress(addr);
+        } else {
+          connectWalletBtn.textContent = "Connect Wallet";
+          if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
+          submitScoreBtn.style.display = "none";
+          showLeaderboardBtn.style.display = "none";
+        }
+        setUserAccount(addr);
+      });
+
+      ethereum.on('chainChanged', () => {
         connectWalletBtn.textContent = "Connect Wallet";
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
         submitScoreBtn.style.display = "none";
         showLeaderboardBtn.style.display = "none";
-      }
-      setUserAccount(addr);
-    });
+        contract = null;
+        window.contract = null;
+        setUserAccount(null);
+      });
 
-    ethereum.on('chainChanged', (chainIdHex) => {
-      connectWalletBtn.textContent = "Connect Wallet";
-      if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
-      submitScoreBtn.style.display = "none";
-      showLeaderboardBtn.style.display = "none";
-      contract = null;
-      window.contract = null;
-      setUserAccount(null);
-      // optional: reload page or re-init
-    });
+      walletListenersAttached = true;
+    }
 
     return true;
 
@@ -182,9 +274,9 @@ async function handleConnectWallet() {
     const account = accounts[0];
     setUserAccount(account);
 
-    connectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
+    connectWalletBtn.textContent = shortenAddress(account);
     if (startConnectWalletBtn) {
-      startConnectWalletBtn.textContent = account.slice(0, 6) + '...' + account.slice(-4);
+      startConnectWalletBtn.textContent = shortenAddress(account);
     }
 
     // ensure contract instance exists
@@ -233,20 +325,24 @@ submitScoreBtn.addEventListener('click', async () => {
   const account = accounts[0];
 
   const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  if (parseInt(chainId, 16) !== CONFIG.SOMNIA_CHAIN_ID) {
-    alert('Wrong chain, switch to Somnia Mainnet');
+  const chainIdNum = parseInt(chainId, 16);
+  const networkCfg = getNetworkConfigByChainId(chainIdNum);
+  if (!networkCfg) {
+    alert(`Wrong chain, switch to ${getReadableChainNames()}`);
     return;
   }
 
   try {
+    submitScoreBtn.disabled = true;
+    submitScoreBtn.textContent = 'Submitting...';
     const timestamp = Math.floor(Date.now() / 1000);
 
     const messageHash = web3.utils.soliditySha3(
       { t: 'address', v: account },
       { t: 'uint32', v: currentScore },
       { t: 'uint32', v: timestamp },
-      { t: 'address', v: CONFIG.CONTRACT_ADDRESS },
-      { t: 'uint256', v: CONFIG.SOMNIA_CHAIN_ID }
+      { t: 'address', v: networkCfg.contractAddress },
+      { t: 'uint256', v: networkCfg.chainId }
     );
 
     const signature = await window.ethereum.request({
@@ -265,57 +361,74 @@ submitScoreBtn.addEventListener('click', async () => {
       .send({ from: account });
 
     alert("Score submitted!");
+    await refreshBattleTotals();
 
   } catch (err) {
     console.error(err);
     alert("Error");
+  } finally {
+    submitScoreBtn.disabled = false;
+    submitScoreBtn.textContent = 'Submit Score';
   }
 });
 
 
 // Leaderboard
 async function handleShowLeaderboard() {
-  if (!contract) {
-    alert('Connect wallet first');
-    return;
-  }
-
   const prevModal = document.getElementById('leaderboard-modal');
   if (prevModal) prevModal.remove();
 
   try {
-    const leaderboard = await contract.methods.getLeaderboard().call();
+    const [apeData, somniaData] = await Promise.allSettled([
+      fetchLeaderboardViaRpc(CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS),
+      fetchLeaderboardViaRpc(CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS)
+    ]);
 
-    const top10 = leaderboard
-      .filter(e => e.player !== '0x0000000000000000000000000000000000000000' && Number(e.score) > 0)
-      .sort((a, b) => Number(b.score) - Number(a.score))
-      .slice(0, 50);
-
-    let html = '<h3>Frost Click Top 50</h3><ol>';
-
-    if (top10.length === 0) {
-      html += '<li>No scores yet</li>';
-    } else {
-      for (let e of top10) {
-        const addr = e.player.slice(0, 6) + '...' + e.player.slice(-4);
-        html += `<li>${addr}: ${e.score}</li>`;
+    const renderList = (dataResult) => {
+      if (dataResult.status !== 'fulfilled') {
+        return '<p>Data unavailable. Set RPC + contract in config.js.</p>';
       }
-    }
+      if (!dataResult.value.top10.length) {
+        return '<p>No scores yet</p>';
+      }
+      const listItems = dataResult.value.top10
+        .map((e) => `<li>${shortenAddress(e.player)}: ${e.score}</li>`)
+        .join('');
+      return `<ol>${listItems}</ol>`;
+    };
 
-    html += `</ol><button id="close-lb">Close</button>`;
+    let html = `<h3>Frost Click Network Battle</h3>
+      <div class="battle-modal-grid">
+        <div class="battle-modal-col">
+          <h4>ApeChain Top 10</h4>
+          <p><strong>Total:</strong> ${apeData.status === 'fulfilled' ? apeData.value.total : 'N/A'}</p>
+          ${renderList(apeData)}
+        </div>
+        <div class="battle-modal-col">
+          <h4>Somnia Top 10</h4>
+          <p><strong>Total:</strong> ${somniaData.status === 'fulfilled' ? somniaData.value.total : 'N/A'}</p>
+          ${renderList(somniaData)}
+        </div>
+      </div>
+      <button id="close-lb">Close</button>`;
 
     const modal = document.createElement('div');
     modal.id = 'leaderboard-modal';
+    modal.className = 'battle-modal';
     modal.innerHTML = html;
     document.body.appendChild(modal);
 
     document.getElementById('close-lb').onclick = () => modal.remove();
+    await refreshBattleTotals();
 
   } catch (err) {
     console.error(err);
-    alert('Error fetching leaderboard');
+    alert('Error fetching battle leaderboard');
   }
 }
 
 showLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
 if (startShowLeaderboardBtn) startShowLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
+
+refreshBattleTotals();
+setInterval(refreshBattleTotals, 30000);
