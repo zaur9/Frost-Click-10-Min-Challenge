@@ -10,11 +10,11 @@
 
   <!-- ====== START SCREEN ====== -->
   <div id="start-screen">
-    <h1>❄️ Frost Click</h1>
-    <p>Survive 10 minutes • Avoid bombs • Collect gifts</p>
+    <h1>❄️ Frost Click: Network Battle</h1>
+    <p>Center game • ApeChain vs Somnia • Top 10 + team total score</p>
     <div id="start-top-actions">
       <button id="start-connect-wallet">Connect Wallet</button>
-      <button id="start-show-leaderboard">Show Top 50</button>
+      <button id="start-show-leaderboard">Show Battle Top 10</button>
       <!-- Music toggle on start screen (right top under leaderboard) -->
       <button id="music-toggle-start" class="music-btn">Music: OFF</button>
     </div>
@@ -23,6 +23,17 @@
 
   <!-- ====== GAME AREA ====== -->
   <div id="game">
+    <div id="battle-layout" aria-hidden="true">
+      <div id="ape-side" class="battle-side">
+        <h2>APECHAIN TOP 10</h2>
+        <div id="ape-total" class="team-total">Total: 0</div>
+      </div>
+      <div id="somnia-side" class="battle-side">
+        <h2>SOMNIA TOP 10</h2>
+        <div id="somnia-total" class="team-total">Total: 0</div>
+      </div>
+    </div>
+
     <div id="score">Score: 0</div>
     <div id="pb-score" style="position:absolute;top:50px;left:20px;color:#ccc;font-size:15px;">Best: 0</div>
     <!-- Music toggle in game HUD (left top under Best Score) -->
@@ -31,7 +42,7 @@
 
     <button id="connect-wallet">Connect Wallet</button>
     <button id="submit-score">Submit Score</button>
-    <button id="show-leaderboard">Show Top 50</button>
+    <button id="show-leaderboard">Show Battle Top 10</button>
 
     <!-- Pause -->
     <button id="pause-btn">Pause</button>
