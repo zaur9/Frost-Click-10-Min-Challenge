@@ -124,7 +124,7 @@ body {
 
 .battle-side {
   width: var(--side-width);
-  padding: 14px 14px 18px;
+  padding: 10px 14px 18px;
   box-sizing: border-box;
   position: relative;
   z-index: 6;
@@ -145,11 +145,15 @@ body {
 }
 
 .ape-brand {
-  display: inline-flex;
+  position: absolute;
+  top: calc(-1 * var(--content-top) + var(--hud-top));
+  left: 194px;
+  display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
+  height: 36px;
 }
 
 .ape-wordmark-box {
@@ -163,8 +167,8 @@ body {
 }
 
 .ape-wordmark-svg {
-  width: 210px;
-  height: auto;
+  width: 142px;
+  height: 36px;
   opacity: 0.96;
 }
 
@@ -176,9 +180,9 @@ body {
 }
 
 .ape-logo-svg {
-  width: 76px;
-  height: auto;
-  max-height: 54px;
+  width: 50px;
+  height: 36px;
+  max-height: 36px;
   opacity: 0.95;
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.28));
 }
@@ -188,6 +192,7 @@ body {
   font-size: 26px;
   letter-spacing: 0.5px;
   line-height: 1;
+  text-align: center;
 }
 
 .team-total {
@@ -195,12 +200,13 @@ body {
   font-weight: 700;
   text-shadow: 0 0 12px rgba(255,255,255,0.45);
   margin-bottom: 10px;
+  text-align: center;
 }
 
 .side-top-list {
   margin: 0;
   padding-left: 22px;
-  max-height: calc(100vh - 130px);
+  max-height: calc(100vh - 180px);
   overflow: hidden;
   font-size: 14px;
   line-height: 1.55;
@@ -214,20 +220,24 @@ body {
 }
 
 .somnia-brand {
-  display: inline-flex;
+  position: absolute;
+  top: calc(-1 * var(--content-top) + var(--hud-top));
+  right: 194px;
+  display: flex;
   align-items: center;
   justify-content: flex-end;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   padding: 0;
   border-radius: 0;
   background: transparent;
   border: 0;
+  height: 36px;
 }
 
 .somnia-brand-logo {
-  width: 190px;
-  height: auto;
-  max-height: 56px;
+  width: 150px;
+  height: 36px;
+  max-height: 36px;
   object-fit: contain;
 }
 
