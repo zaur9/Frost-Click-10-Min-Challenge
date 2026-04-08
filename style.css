@@ -9,6 +9,8 @@ html, body {
 body {
   --side-width: 28vw;
   --center-width: 44vw;
+  --hud-top: 18px;
+  --content-top: 78px;
   background: linear-gradient(90deg, #1098e6 0 50%, #c200ff 50% 100%);
   overflow: hidden;
   font-family: 'Arial', sans-serif;
@@ -82,10 +84,24 @@ body {
 
 #battle-layout {
   position: absolute;
-  inset: 0;
+  top: var(--content-top);
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   pointer-events: none;
   z-index: 1;
+}
+
+#playfield-bg {
+  position: absolute;
+  top: var(--content-top);
+  left: var(--side-width);
+  width: var(--center-width);
+  height: calc(100vh - var(--content-top));
+  background: #BCC3F0;
+  opacity: 0.28;
+  z-index: 2;
 }
 
 .battle-side {
@@ -211,7 +227,7 @@ body {
 /* SCORE + TIMER */
 #score {
   position: absolute;
-  top: 20px;
+  top: calc(var(--content-top) + 4px);
   left: calc(var(--side-width) + 20px);
   color: #4dffcc;
   font-size: 26px;
@@ -220,7 +236,7 @@ body {
 
 #timer {
   position: absolute;
-  top: 20px;
+  top: calc(var(--content-top) + 4px);
   right: calc(var(--side-width) + 20px);
   color: #9f4dff;
   font-size: 22px;
@@ -229,7 +245,7 @@ body {
 
 #pb-score {
   position: absolute;
-  top: 50px;
+  top: calc(var(--content-top) + 34px);
   left: calc(var(--side-width) + 20px);
   color: #c8fff6;
   font-size: 15px;
@@ -249,8 +265,8 @@ body {
 }
 
 #connect-wallet { top: 20px; right: calc(var(--side-width) + 140px); }
-#submit-score { top: 60px; right: calc(var(--side-width) + 140px); display: none; }
-#show-leaderboard { top: 100px; right: calc(var(--side-width) + 140px); display: none; }
+#submit-score { top: 58px; right: calc(var(--side-width) + 140px); display: none; }
+#show-leaderboard { top: 96px; right: calc(var(--side-width) + 140px); display: none; }
 
 /* GAME OVER */
 #game-over {
@@ -418,6 +434,6 @@ body {
 
 #music-toggle-game {
   position: absolute;
-  top: 90px;
+  top: calc(var(--content-top) + 74px);
   left: calc(var(--side-width) + 20px);
 }
