@@ -11,6 +11,7 @@ let contract = null;
 let walletListenersAttached = false;
 
 const connectWalletBtn = document.getElementById('connect-wallet');
+const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
 const submitScoreBtn = document.getElementById('submit-score');
 const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
@@ -254,9 +255,11 @@ async function initWeb3() {
         const addr = (accounts && accounts.length) ? accounts[0] : null;
         if (addr) {
           connectWalletBtn.textContent = shortenAddress(addr);
+          if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = shortenAddress(addr);
           if (startConnectWalletBtn) startConnectWalletBtn.textContent = shortenAddress(addr);
         } else {
           connectWalletBtn.textContent = "Connect Wallet";
+          if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
           if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
           submitScoreBtn.style.display = "none";
           showLeaderboardBtn.style.display = "none";
@@ -266,6 +269,7 @@ async function initWeb3() {
 
       ethereum.on('chainChanged', () => {
         connectWalletBtn.textContent = "Connect Wallet";
+        if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
         submitScoreBtn.style.display = "none";
         showLeaderboardBtn.style.display = "none";
@@ -299,6 +303,9 @@ async function handleConnectWallet() {
     setUserAccount(account);
 
     connectWalletBtn.textContent = shortenAddress(account);
+    if (apeConnectWalletBtn) {
+      apeConnectWalletBtn.textContent = shortenAddress(account);
+    }
     if (startConnectWalletBtn) {
       startConnectWalletBtn.textContent = shortenAddress(account);
     }
@@ -329,6 +336,7 @@ async function handleConnectWallet() {
 
 // Connect Wallet buttons (game HUD + start screen)
 connectWalletBtn.addEventListener('click', handleConnectWallet);
+if (apeConnectWalletBtn) apeConnectWalletBtn.addEventListener('click', handleConnectWallet);
 if (startConnectWalletBtn) startConnectWalletBtn.addEventListener('click', handleConnectWallet);
 
 
