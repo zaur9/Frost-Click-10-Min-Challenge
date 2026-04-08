@@ -203,6 +203,7 @@ body {
   transform: translateX(-50%);
   transition: transform 0.10s linear;
   pointer-events: auto;
+  z-index: 8;
 }
 
 /* Changed hover to affect only scale preserve translate by using transform with translate placeholders */
