@@ -159,13 +159,13 @@ function createObject(emoji, type, speed) {
   const spawnMinX = bounds.left + 24;
   const spawnMaxX = bounds.right - 24;
   obj.style.left = (spawnMinX + Math.random() * Math.max(1, (spawnMaxX - spawnMinX))) + 'px';
-  // start above the top; actual vertical position tracked in obj.y
-  obj.style.transform = `translateX(-50%) translateY(-50px)`;
+  // Start from the top edge of playfield (below HUD area)
+  obj.style.transform = `translateX(-50%) translateY(0px)`;
 
   game.appendChild(obj);
 
   // store speed in px per second (existing values are treated as px/sec)
-  objects.push({ el: obj, type, y: -50, speed });
+  objects.push({ el: obj, type, y: 0, speed });
 }
 
 // === CLICK HANDLING ===
