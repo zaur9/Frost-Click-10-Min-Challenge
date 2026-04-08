@@ -90,8 +90,6 @@ const resultTitle = document.getElementById('result-title');
 const finalScoreEl = document.getElementById('final-score');
 const timeSurvivedEl = document.getElementById('time-survived');
 const restartBtn = document.getElementById('restart');
-const submitScoreBtn = document.getElementById('submit-score');
-const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
@@ -301,8 +299,6 @@ function endGame(isWin) {
 
   gameOverEl.style.display = 'block';
 
-  submitScoreBtn.style.display = userAccount ? 'block' : 'none';
-  showLeaderboardBtn.style.display = userAccount ? 'block' : 'none';
 }
 
 // === GAME LOOP ===
