@@ -90,6 +90,7 @@ const resultTitle = document.getElementById('result-title');
 const finalScoreEl = document.getElementById('final-score');
 const timeSurvivedEl = document.getElementById('time-survived');
 const restartBtn = document.getElementById('restart');
+const gameOverSubmitBtn = document.getElementById('gameover-submit-score');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
@@ -298,6 +299,9 @@ function endGame(isWin) {
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
 
   gameOverEl.style.display = 'block';
+  if (gameOverSubmitBtn) {
+    gameOverSubmitBtn.style.display = userAccount ? 'inline-block' : 'none';
+  }
 
 }
 
@@ -482,3 +486,9 @@ restartBtn.addEventListener('click', () => {
   gameOverEl.style.display = 'none';
   startGame();
 });
+
+if (gameOverSubmitBtn) {
+  gameOverSubmitBtn.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('submit-score-request'));
+  });
+}
