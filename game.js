@@ -97,6 +97,13 @@ const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 const pbScoreEl = document.getElementById('pb-score');
 
+function getPlayfieldBounds() {
+  const side = window.innerWidth * 0.28;
+  const left = side;
+  const right = window.innerWidth - side;
+  return { left, right };
+}
+
 // Wallet
 let userAccount = null;
 export function setUserAccount(addr) {
@@ -144,8 +151,11 @@ function createObject(emoji, type, speed) {
     obj.textContent = emoji;
   }
 
-  // set initial horizontal pos (centered via translateX(-50%))
-  obj.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+  // Spawn only inside center playfield (between side battle panels)
+  const bounds = getPlayfieldBounds();
+  const spawnMinX = bounds.left + 24;
+  const spawnMaxX = bounds.right - 24;
+  obj.style.left = (spawnMinX + Math.random() * Math.max(1, (spawnMaxX - spawnMinX))) + 'px';
   // start above the top; actual vertical position tracked in obj.y
   obj.style.transform = `translateX(-50%) translateY(-50px)`;
 
