@@ -17,6 +17,8 @@ const startConnectWalletBtn = document.getElementById('start-connect-wallet');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 const apeTotalEl = document.getElementById('ape-total');
 const somniaTotalEl = document.getElementById('somnia-total');
+const apeTopListEl = document.getElementById('ape-top-list');
+const somniaTopListEl = document.getElementById('somnia-top-list');
 
 // ABI расширен: добавлены indexPlusOne и leaderboard для совместимости с game.js
 const contractABI = [
@@ -157,6 +159,22 @@ function setTeamTotal(el, title, value, isError = false) {
   el.textContent = `${title}: ${value}`;
 }
 
+function setSideTopList(el, entries, hasError = false) {
+  if (!el) return;
+  if (hasError) {
+    el.innerHTML = '<li>N/A</li>';
+    return;
+  }
+  if (!entries || !entries.length) {
+    el.innerHTML = '<li>No scores yet</li>';
+    return;
+  }
+  el.innerHTML = entries
+    .slice(0, 10)
+    .map((entry) => `<li>${shortenAddress(entry.player)}: ${entry.score}</li>`)
+    .join('');
+}
+
 async function fetchLeaderboardViaRpc(rpcUrl, contractAddress) {
   if (!rpcUrl || !contractAddress || /^0x0{40}$/i.test(contractAddress)) {
     throw new Error('Missing RPC URL or contract address');
@@ -182,18 +200,24 @@ async function refreshBattleTotals() {
 
     if (apeData.status === 'fulfilled') {
       setTeamTotal(apeTotalEl, 'Total', apeData.value.total, false);
+      setSideTopList(apeTopListEl, apeData.value.top10, false);
     } else {
       setTeamTotal(apeTotalEl, 'Total', 0, true);
+      setSideTopList(apeTopListEl, [], true);
     }
 
     if (somniaData.status === 'fulfilled') {
       setTeamTotal(somniaTotalEl, 'Total', somniaData.value.total, false);
+      setSideTopList(somniaTopListEl, somniaData.value.top10, false);
     } else {
       setTeamTotal(somniaTotalEl, 'Total', 0, true);
+      setSideTopList(somniaTopListEl, [], true);
     }
   } catch (err) {
     setTeamTotal(apeTotalEl, 'Total', 0, true);
     setTeamTotal(somniaTotalEl, 'Total', 0, true);
+    setSideTopList(apeTopListEl, [], true);
+    setSideTopList(somniaTopListEl, [], true);
   }
 }
 
