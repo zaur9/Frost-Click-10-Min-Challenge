@@ -1,19 +1,13 @@
 import { CONFIG } from './config.js';
-import {
-  getScore,
-  isGameActive,
-  setUserAccount,
-  endGame
-} from './game.js';
+import { setUserAccount } from './game.js';
 
 let web3 = null;
 let contract = null;
 let walletListenersAttached = false;
+let activeNetworkCfg = null;
 
 const connectWalletBtn = document.getElementById('connect-wallet');
 const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
-const submitScoreBtn = document.getElementById('submit-score');
-const showLeaderboardBtn = document.getElementById('show-leaderboard');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 const apeTotalEl = document.getElementById('ape-total');
@@ -222,21 +216,34 @@ async function refreshBattleTotals() {
   }
 }
 
-async function initWeb3() {
+async function initWeb3(targetChainId = null) {
   if (typeof window.ethereum === 'undefined') {
     alert('Please install MetaMask or Somnia Wallet!');
     return false;
   }
 
   try {
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (targetChainId !== null) {
+      const hexChainId = `0x${Number(targetChainId).toString(16)}`;
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: hexChainId }]
+        });
+      } catch (switchErr) {
+        alert(`Please switch wallet network to ${targetChainId}`);
+        return false;
+      }
+    }
 
-    const chainIdNum = parseInt(chainId, 16);
+    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainIdNum = parseInt(chainIdHex, 16);
     const networkCfg = getNetworkConfigByChainId(chainIdNum);
     if (!networkCfg) {
       alert(`Please switch to ${getReadableChainNames()}`);
       return false;
     }
+    activeNetworkCfg = networkCfg;
 
     web3 = new Web3(window.ethereum);
 
@@ -261,8 +268,6 @@ async function initWeb3() {
           connectWalletBtn.textContent = "Connect Wallet";
           if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
           if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
-          submitScoreBtn.style.display = "none";
-          showLeaderboardBtn.style.display = "none";
         }
         setUserAccount(addr);
       });
@@ -271,10 +276,9 @@ async function initWeb3() {
         connectWalletBtn.textContent = "Connect Wallet";
         if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = "Connect Wallet";
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
-        submitScoreBtn.style.display = "none";
-        showLeaderboardBtn.style.display = "none";
         contract = null;
         window.contract = null;
+        activeNetworkCfg = null;
         setUserAccount(null);
       });
 
@@ -290,8 +294,8 @@ async function initWeb3() {
 }
 
 
-async function handleConnectWallet() {
-  const ready = await initWeb3();
+async function handleConnectWallet(targetChainId) {
+  const ready = await initWeb3(targetChainId);
   if (!ready) return;
 
   try {
@@ -313,7 +317,8 @@ async function handleConnectWallet() {
     // ensure contract instance exists
     if (!contract) {
       try {
-        contract = new web3.eth.Contract(contractABI, CONFIG.CONTRACT_ADDRESS);
+        if (!activeNetworkCfg) return;
+        contract = new web3.eth.Contract(contractABI, activeNetworkCfg.contractAddress);
         window.contract = contract;
       } catch (e) {
         console.error('Contract init failed', e);
@@ -322,87 +327,21 @@ async function handleConnectWallet() {
       }
     }
 
-    showLeaderboardBtn.style.display = 'block';
-    if (startShowLeaderboardBtn) startShowLeaderboardBtn.style.display = 'block';
-
-    if (!isGameActive()) {
-      submitScoreBtn.style.display = 'block';
-    }
-
   } catch (error) {
     console.error(error);
   }
 }
 
-// Connect Wallet buttons (game HUD + start screen)
-connectWalletBtn.addEventListener('click', handleConnectWallet);
-if (apeConnectWalletBtn) apeConnectWalletBtn.addEventListener('click', handleConnectWallet);
-if (startConnectWalletBtn) startConnectWalletBtn.addEventListener('click', handleConnectWallet);
-
-
-// Submit Score Signed
-submitScoreBtn.addEventListener('click', async () => {
-  if (!contract) {
-    alert('Connect wallet first');
-    return;
-  }
-
-  const currentScore = getScore();
-  if (currentScore <= 0) {
-    alert('Score must be > 0');
-    return;
-  }
-
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-  const account = accounts[0];
-
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  const chainIdNum = parseInt(chainId, 16);
-  const networkCfg = getNetworkConfigByChainId(chainIdNum);
-  if (!networkCfg) {
-    alert(`Wrong chain, switch to ${getReadableChainNames()}`);
-    return;
-  }
-
-  try {
-    submitScoreBtn.disabled = true;
-    submitScoreBtn.textContent = 'Submitting...';
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const messageHash = web3.utils.soliditySha3(
-      { t: 'address', v: account },
-      { t: 'uint32', v: currentScore },
-      { t: 'uint32', v: timestamp },
-      { t: 'address', v: networkCfg.contractAddress },
-      { t: 'uint256', v: networkCfg.chainId }
-    );
-
-    const signature = await window.ethereum.request({
-      method: 'personal_sign',
-      params: [messageHash, account]
-    });
-
-    const sig = signature.startsWith("0x") ? signature.slice(2) : signature;
-
-    const r = "0x" + sig.slice(0, 64);
-    const s = "0x" + sig.slice(64, 128);
-    let v = parseInt(sig.slice(128, 130), 16);
-    if (v < 27) v += 27;
-
-    await contract.methods.submitScoreSigned(currentScore, timestamp, v, r, s)
-      .send({ from: account });
-
-    alert("Score submitted!");
-    await refreshBattleTotals();
-
-  } catch (err) {
-    console.error(err);
-    alert("Error");
-  } finally {
-    submitScoreBtn.disabled = false;
-    submitScoreBtn.textContent = 'Submit Score';
-  }
-});
+// Connect Wallet buttons by side: left=Ape, right=Somnia
+if (connectWalletBtn) {
+  connectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
+}
+if (apeConnectWalletBtn) {
+  apeConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.APECHAIN_CHAIN_ID));
+}
+if (startConnectWalletBtn) {
+  startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
+}
 
 
 // Leaderboard
@@ -459,7 +398,6 @@ async function handleShowLeaderboard() {
   }
 }
 
-showLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
 if (startShowLeaderboardBtn) startShowLeaderboardBtn.addEventListener('click', handleShowLeaderboard);
 
 refreshBattleTotals();
