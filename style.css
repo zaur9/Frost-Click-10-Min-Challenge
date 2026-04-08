@@ -100,7 +100,9 @@ body {
   width: var(--center-width);
   height: calc(100vh - var(--content-top));
   background: #BCC3F0;
-  opacity: 0.28;
+  opacity: 1;
+  border-left: 1px solid rgba(255,255,255,0.35);
+  border-right: 1px solid rgba(255,255,255,0.35);
   z-index: 2;
 }
 
@@ -194,7 +196,7 @@ body {
 /* OBJECTS */
 .object {
   position: absolute;
-  top: -50px;
+  top: 0;
   font-size: 32px;
   user-select: none;
   width: 50px;
@@ -244,16 +246,11 @@ body {
 }
 
 #pb-score {
-  position: absolute;
-  top: calc(var(--content-top) + 34px);
-  left: calc(var(--side-width) + 20px);
-  color: #c8fff6;
-  font-size: 15px;
-  font-family: 'Arial', sans-serif;
-  z-index: 2;
+  display: none !important;
 }
 
 /* BUTTONS */
+#ape-connect-wallet,
 #connect-wallet,
 #submit-score,
 #show-leaderboard {
@@ -264,9 +261,10 @@ body {
   z-index: 30;
 }
 
-#connect-wallet { top: 20px; right: calc(var(--side-width) + 140px); }
-#submit-score { top: 58px; right: calc(var(--side-width) + 140px); display: none; }
-#show-leaderboard { top: 96px; right: calc(var(--side-width) + 140px); display: none; }
+#ape-connect-wallet { top: var(--hud-top); left: 16px; width: 170px; }
+#connect-wallet { top: var(--hud-top); right: 16px; width: 170px; }
+#submit-score { top: 58px; right: 16px; display: none; }
+#show-leaderboard { top: 96px; right: 16px; display: none; }
 
 /* GAME OVER */
 #game-over {
@@ -367,6 +365,7 @@ body {
 #start-connect-wallet,
 #start-show-leaderboard,
 #pause-btn,
+#ape-connect-wallet,
 #connect-wallet,
 #submit-score,
 #show-leaderboard,
@@ -384,6 +383,7 @@ body {
 #start-connect-wallet:hover,
 #start-show-leaderboard:hover,
 #pause-btn:hover,
+#ape-connect-wallet:hover,
 #connect-wallet:hover,
 #submit-score:hover,
 #show-leaderboard:hover,
@@ -434,6 +434,6 @@ body {
 
 #music-toggle-game {
   position: absolute;
-  top: calc(var(--content-top) + 74px);
+  top: calc(var(--content-top) + 44px);
   left: calc(var(--side-width) + 20px);
 }
