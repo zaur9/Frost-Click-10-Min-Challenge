@@ -90,8 +90,10 @@ body {
 
 .battle-side {
   width: var(--side-width);
-  padding: 18px 14px;
+  padding: 14px 14px 18px;
   box-sizing: border-box;
+  position: relative;
+  z-index: 6;
 }
 
 #ape-side {
@@ -107,15 +109,33 @@ body {
 }
 
 .battle-side h2 {
-  margin: 0 0 10px;
-  font-size: 20px;
+  margin: 0 0 8px;
+  font-size: 26px;
   letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .team-total {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   text-shadow: 0 0 12px rgba(255,255,255,0.45);
+  margin-bottom: 10px;
+}
+
+.side-top-list {
+  margin: 0;
+  padding-left: 22px;
+  max-height: calc(100vh - 130px);
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.55;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.55);
+}
+
+#somnia-side .side-top-list {
+  padding-left: 0;
+  padding-right: 22px;
+  list-style-position: inside;
 }
 
 /* PAUSE OVERLAY (unified, removed duplicate) */
