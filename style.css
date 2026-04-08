@@ -11,7 +11,7 @@ body {
   --center-width: 44vw;
   --hud-top: 18px;
   --content-top: 78px;
-  background: linear-gradient(90deg, #1098e6 0 50%, #c200ff 50% 100%);
+  background: linear-gradient(90deg, #0054fa 0 50%, #ff00d6 75%, #00d4ff 100%);
   overflow: hidden;
   font-family: 'Arial', sans-serif;
   color: white;
@@ -130,13 +130,13 @@ body {
 
 #ape-side {
   border-right: 2px solid rgba(255,255,255,0.2);
-  background: rgba(10, 140, 220, 0.16);
+  background: rgba(0, 84, 250, 0.24);
 }
 
 #somnia-side {
   margin-left: var(--center-width);
   border-left: 2px solid rgba(255,255,255,0.2);
-  background: rgba(185, 25, 240, 0.16);
+  background: linear-gradient(135deg, rgba(255, 0, 214, 0.26) 0%, rgba(0, 212, 255, 0.24) 100%);
   text-align: right;
 }
 
