@@ -623,18 +623,6 @@ body {
     --content-top: 72px;
   }
 
-  #ape-connect-wallet,
-  #connect-wallet {
-    width: 154px;
-    font-size: 13px;
-    padding: 9px 12px;
-  }
-
-  .ape-brand { left: 176px; }
-  .somnia-brand { right: 176px; }
-  .ape-coin-text { font-size: 24px; }
-  .somnia-brand-logo { width: 136px; }
-
   .battle-side h2 { font-size: 23px; }
   .team-total { font-size: 21px; }
   .side-top-list { font-size: 13px; }
@@ -663,18 +651,12 @@ body {
   #score { left: calc(var(--side-width) + 12px); }
   #timer { right: calc(var(--side-width) + 12px); }
 
-  .ape-brand { left: 162px; }
-  .somnia-brand { right: 162px; }
-  .ape-coin-badge { height: 32px; padding: 4px 8px; }
-  .ape-coin-text { font-size: 21px; }
-  .somnia-brand-logo { width: 124px; height: 32px; }
-
   .battle-side h2 { font-size: 21px; }
   .team-total { font-size: 19px; }
   .side-top-list { font-size: 12px; line-height: 1.45; }
 }
 
-@media (max-width: 1024px), (max-height: 700px) {
+@media (max-width: 1024px) {
   body {
     --side-width: 24vw;
     --center-width: 52vw;
@@ -692,20 +674,6 @@ body {
     padding-left: 8px;
     padding-right: 8px;
   }
-
-  #ape-connect-wallet,
-  #connect-wallet {
-    width: 136px;
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-
-  .ape-brand { left: 146px; }
-  .somnia-brand { right: 146px; }
-  .ape-coin-badge { height: 30px; padding: 3px 7px; }
-  .ape-coin-icon { width: 16px; height: 16px; }
-  .ape-coin-text { font-size: 18px; }
-  .somnia-brand-logo { width: 112px; height: 30px; }
 
   #score,
   #timer {
