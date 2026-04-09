@@ -66,8 +66,10 @@ let pauseStart = null;
 let pausedAccum = 0;
 
 // Branded logo drops
-const LOGO_DROP_INTERVAL_MS = 5_000;
-let lastLogoDrop = 0;
+const SOMNIA_DROP_INTERVAL_MS = 5_000;
+const APE_DROP_INTERVAL_MS = 4_000;
+let lastSomniaDrop = 0;
+let lastApeDrop = 0;
 
 let lastIceSpawn = 0;
 const ICE_INTERVAL = 29 * 1000; // ровно 29 секунд
@@ -75,7 +77,7 @@ const ICE_INTERVAL = 29 * 1000; // ровно 29 секунд
 // Time-based spawn settings
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
 const SPAWN_CHANCE_SNOW = 0.45;  // ~3/s (0.45 * 6.7)
-const SPAWN_CHANCE_BOMB = 0.45;  // ~3/s
+const SPAWN_CHANCE_BOMB = 0.50;  // ~3.3/s
 const SPAWN_CHANCE_GIFT = 0.18; // ~1.2/s (0.18 * 6.7)
 
 // DOM
@@ -363,10 +365,14 @@ function spawnTick() {
     lastIceSpawn = now;
   }
 
-  if (now - lastLogoDrop >= LOGO_DROP_INTERVAL_MS) {
+  if (now - lastSomniaDrop >= SOMNIA_DROP_INTERVAL_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
+    lastSomniaDrop = now;
+  }
+
+  if (now - lastApeDrop >= APE_DROP_INTERVAL_MS) {
     createObject('', 'ape-logo', 70 + Math.random() * 30);
-    lastLogoDrop = now;
+    lastApeDrop = now;
   }
 
   if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70); // max 230
@@ -442,7 +448,8 @@ function startGame() {
   
   lastFrameTime = null;
 
-  lastLogoDrop = startTime;
+  lastSomniaDrop = startTime;
+  lastApeDrop = startTime;
 
   timerInterval = setInterval(() => {
     if (isPaused) return;
