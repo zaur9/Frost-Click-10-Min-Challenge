@@ -308,6 +308,7 @@ body {
   width: 50px;
   transform: translateX(-50%);
   transition: transform 0.10s linear;
+  will-change: transform;
   pointer-events: auto;
   z-index: 8;
 }
@@ -326,17 +327,11 @@ body {
   }
 }
 
-/* Bomb glow */
+/* Bomb: no visual effects */
 .object.bomb {
-  animation: blink 0.9s infinite;
-  filter: drop-shadow(0 0 8px rgba(255,40,40,0.75)) !important;
+  animation: none !important;
+  filter: none !important;
   z-index: 2;
-}
-
-@keyframes blink {
-  0%, 45% { opacity: 1; }
-  50%, 95% { opacity: 0.25; }
-  100% { opacity: 1; }
 }
 
 /* SCORE + TIMER */
