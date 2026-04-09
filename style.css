@@ -319,11 +319,17 @@ body {
   transform: translateX(-50%) scale(1.18);
 }
 
+/* Disable hover scaling on touch/mobile devices */
+@media (hover: none), (pointer: coarse) {
+  .object:hover {
+    transform: translateX(-50%);
+  }
+}
+
 /* Bomb glow */
 .object.bomb {
   animation: blink 0.9s infinite;
-  filter: drop-shadow(0 0 8px rgba(255,40,40,0.93))
-          drop-shadow(0 0 18px rgba(255,30,30,0.55)) !important;
+  filter: drop-shadow(0 0 8px rgba(255,40,40,0.75)) !important;
   z-index: 2;
 }
 
