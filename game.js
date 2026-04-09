@@ -74,10 +74,9 @@ const ICE_INTERVAL = 29 * 1000; // ровно 29 секунд
 
 // Time-based spawn settings
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
-const SPAWN_CHANCE_SNOW = 0.60;  // approx 3/s (0.45 * 6.7)
-const SPAWN_CHANCE_BOMB = 0.60;  // approx 3/s
+const SPAWN_CHANCE_SNOW = 0.45;  // ~3/s (0.45 * 6.7)
+const SPAWN_CHANCE_BOMB = 0.45;  // ~3/s
 const SPAWN_CHANCE_GIFT = 0.18; // ~1.2/s (0.18 * 6.7)
-const SPAWN_CHANCE_ICE = 0.0033;  // ~0.15/s
 
 // DOM
 const game = document.getElementById('game');
@@ -93,13 +92,22 @@ const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
 const pbScoreEl = document.getElementById('pb-score');
+const playfieldBgEl = document.getElementById('playfield-bg');
 const PLAYFIELD_TOP_OFFSET = 78;
 
 function getPlayfieldBounds() {
+  // Use real center playfield bounds to keep spawn correct
+  // even if layout widths change in CSS.
+  if (playfieldBgEl) {
+    const rect = playfieldBgEl.getBoundingClientRect();
+    if (rect.width > 0) {
+      return { left: rect.left, right: rect.right };
+    }
+  }
+
+  // Fallback for cases where playfield element is unavailable.
   const side = window.innerWidth * 0.28;
-  const left = side;
-  const right = window.innerWidth - side;
-  return { left, right };
+  return { left: side, right: window.innerWidth - side };
 }
 
 // Wallet
@@ -350,10 +358,10 @@ function spawnTick() {
 
   const now = Date.now();
 
-if (now - lastIceSpawn >= ICE_INTERVAL) {
-  createObject('🧊', 'ice', 80);
-  lastIceSpawn = now;
-}
+  if (now - lastIceSpawn >= ICE_INTERVAL) {
+    createObject('🧊', 'ice', 80);
+    lastIceSpawn = now;
+  }
 
   if (now - lastLogoDrop >= LOGO_DROP_INTERVAL_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
