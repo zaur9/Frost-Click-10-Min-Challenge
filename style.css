@@ -307,24 +307,15 @@ body {
   user-select: none;
   width: 50px;
   transform: translateX(-50%);
-  transition: transform 0.10s linear;
+  transition: none;
   will-change: transform;
   pointer-events: auto;
   z-index: 8;
 }
 
-/* Changed hover to affect only scale preserve translate by using transform with translate placeholders */
+/* No hover effects for objects */
 .object:hover {
-  /* keep translateX(-50%) to preserve horizontal centering; do not override translateY performed by JS.
-     We'll combine translateX and scale only to avoid overwriting translateY from JS. */
-  transform: translateX(-50%) scale(1.18);
-}
-
-/* Disable hover scaling on touch/mobile devices */
-@media (hover: none), (pointer: coarse) {
-  .object:hover {
-    transform: translateX(-50%);
-  }
+  transform: translateX(-50%);
 }
 
 /* Bomb: no visual effects */
