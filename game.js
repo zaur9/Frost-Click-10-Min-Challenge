@@ -259,14 +259,13 @@ function activateFreeze() {
     width: `${playfieldWidth}px`,
     height: `${playfieldHeight}px`,
     background: `
-      radial-gradient(110% 90% at 14% 0%, rgba(226,247,255,0.48) 0%, rgba(187,228,255,0.12) 52%, rgba(136,187,238,0.07) 100%),
-      radial-gradient(80px 70px at 18% 24%, rgba(225,248,255,0.22) 0%, rgba(225,248,255,0) 72%),
-      radial-gradient(120px 90px at 72% 38%, rgba(215,242,255,0.17) 0%, rgba(215,242,255,0) 78%),
-      radial-gradient(90px 80px at 36% 74%, rgba(225,248,255,0.16) 0%, rgba(225,248,255,0) 75%),
-      linear-gradient(127deg, transparent 0%, transparent 12%, rgba(226,247,255,0.12) 13%, transparent 16%, transparent 28%, rgba(226,247,255,0.10) 29%, transparent 33%, transparent 46%, rgba(226,247,255,0.08) 47%, transparent 52%, transparent 67%, rgba(226,247,255,0.11) 68%, transparent 73%, transparent 100%),
-      linear-gradient(39deg, transparent 0%, transparent 18%, rgba(220,245,255,0.10) 19%, transparent 23%, transparent 37%, rgba(220,245,255,0.07) 38%, transparent 42%, transparent 57%, rgba(220,245,255,0.09) 58%, transparent 63%, transparent 80%, rgba(220,245,255,0.06) 81%, transparent 85%, transparent 100%),
-      linear-gradient(11deg, transparent 0%, transparent 31%, rgba(210,240,255,0.06) 32%, transparent 36%, transparent 54%, rgba(210,240,255,0.05) 55%, transparent 60%, transparent 100%),
-      rgba(150,206,248,0.2)
+      radial-gradient(120% 95% at 15% 0%, rgba(230,248,255,0.45) 0%, rgba(188,225,255,0.13) 52%, rgba(132,182,236,0.08) 100%),
+      radial-gradient(130px 100px at 24% 18%, rgba(225,248,255,0.22) 0%, rgba(225,248,255,0) 75%),
+      radial-gradient(160px 120px at 76% 62%, rgba(225,248,255,0.17) 0%, rgba(225,248,255,0) 78%),
+      repeating-linear-gradient(132deg, transparent 0 21px, rgba(234,250,255,0.24) 21px 22px, transparent 22px 63px),
+      repeating-linear-gradient(47deg, transparent 0 34px, rgba(229,247,255,0.18) 34px 35px, transparent 35px 87px),
+      repeating-linear-gradient(16deg, transparent 0 54px, rgba(220,242,255,0.12) 54px 55px, transparent 55px 126px),
+      rgba(148,205,248,0.18)
     `,
     pointerEvents: 'none',
     zIndex: '5'
