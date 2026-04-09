@@ -152,13 +152,13 @@ body {
 }
 
 #ape-side {
-  border-right: 2px solid rgba(255,255,255,0.2);
+  border-right: 0;
   background: rgba(0, 84, 250, 0.24);
 }
 
 #somnia-side {
   margin-left: var(--center-width);
-  border-left: 2px solid rgba(255,255,255,0.2);
+  border-left: 0;
   background: linear-gradient(135deg, rgba(255, 0, 214, 0.26) 0%, rgba(0, 212, 255, 0.24) 100%);
   text-align: right;
 }
