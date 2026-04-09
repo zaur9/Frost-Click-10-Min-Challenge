@@ -260,7 +260,12 @@ function activateFreeze() {
     left: `${bounds.left}px`,
     width: `${playfieldWidth}px`,
     height: `${playfieldHeight}px`,
-    background: 'rgba(200, 240, 255, 0.3)',
+    background: `
+      radial-gradient(120% 90% at 10% 0%, rgba(215,245,255,0.42) 0%, rgba(170,220,255,0.10) 55%, rgba(120,180,235,0.06) 100%),
+      repeating-linear-gradient(128deg, rgba(215,245,255,0.14) 0 2px, rgba(180,230,255,0.02) 2px 16px),
+      repeating-linear-gradient(38deg, rgba(200,240,255,0.10) 0 1px, rgba(165,220,255,0.02) 1px 14px),
+      rgba(155,210,255,0.18)
+    `,
     pointerEvents: 'none',
     zIndex: '5'
   });
