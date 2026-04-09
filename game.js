@@ -65,11 +65,9 @@ const HIT_PADDING_SNOW_SIDE = 4;
 let pauseStart = null;
 let pausedAccum = 0;
 
-// Somnia schedule
-const SOMNIA_INTERVAL_MS = 58_000;
-const SOMNIA_TOTAL = 10;
-let somniaSchedule = [];
-let nextSomniaIndex = 0;
+// Branded logo drops
+const LOGO_DROP_INTERVAL_MS = 5_000;
+let lastLogoDrop = 0;
 
 let lastIceSpawn = 0;
 const ICE_INTERVAL = 29 * 1000; // ровно 29 секунд
@@ -143,7 +141,7 @@ function createObject(emoji, type, speed) {
   obj.style.top = `${PLAYFIELD_TOP_OFFSET}px`;
 
   // Ensure somnia has immediate hitbox even if textContent empty / CSS not applied yet
-  if (type === 'somnia') {
+  if (type === 'somnia' || type === 'ape-logo') {
     obj.style.width = '32px';
     obj.style.height = '32px';
     obj.style.display = 'block';
@@ -216,7 +214,7 @@ game.addEventListener('click', (e) => {
       else if (type === 'gift') score += 5;
       else if (type === 'ice') score += 2;
       else if (type === 'toy-green' || type === 'toy-purple') score += 2;
-      else if (type === 'somnia') score += 100;
+      else if (type === 'somnia' || type === 'ape-logo') score += 20;
       updateScore();
       return;
     }
@@ -231,8 +229,8 @@ game.addEventListener('click', (e) => {
       score += 2;
     } else if (type === 'toy-green' || type === 'toy-purple') {
       score += 2;
-    } else if (type === 'somnia') {
-      score += 100;
+    } else if (type === 'somnia' || type === 'ape-logo') {
+      score += 20;
     } else if (type === 'gift') {
       score += 5;
     } else {
@@ -265,8 +263,9 @@ function activateFreeze() {
       radial-gradient(80px 70px at 18% 24%, rgba(225,248,255,0.22) 0%, rgba(225,248,255,0) 72%),
       radial-gradient(120px 90px at 72% 38%, rgba(215,242,255,0.17) 0%, rgba(215,242,255,0) 78%),
       radial-gradient(90px 80px at 36% 74%, rgba(225,248,255,0.16) 0%, rgba(225,248,255,0) 75%),
-      repeating-linear-gradient(132deg, rgba(226,247,255,0.13) 0 1px, rgba(164,212,246,0.03) 1px 22px),
-      repeating-linear-gradient(37deg, rgba(226,247,255,0.09) 0 1px, rgba(164,212,246,0.02) 1px 26px),
+      linear-gradient(127deg, transparent 0%, transparent 12%, rgba(226,247,255,0.12) 13%, transparent 16%, transparent 28%, rgba(226,247,255,0.10) 29%, transparent 33%, transparent 46%, rgba(226,247,255,0.08) 47%, transparent 52%, transparent 67%, rgba(226,247,255,0.11) 68%, transparent 73%, transparent 100%),
+      linear-gradient(39deg, transparent 0%, transparent 18%, rgba(220,245,255,0.10) 19%, transparent 23%, transparent 37%, rgba(220,245,255,0.07) 38%, transparent 42%, transparent 57%, rgba(220,245,255,0.09) 58%, transparent 63%, transparent 80%, rgba(220,245,255,0.06) 81%, transparent 85%, transparent 100%),
+      linear-gradient(11deg, transparent 0%, transparent 31%, rgba(210,240,255,0.06) 32%, transparent 36%, transparent 54%, rgba(210,240,255,0.05) 55%, transparent 60%, transparent 100%),
       rgba(150,206,248,0.2)
     `,
     pointerEvents: 'none',
@@ -357,10 +356,10 @@ if (now - lastIceSpawn >= ICE_INTERVAL) {
   lastIceSpawn = now;
 }
 
-  const elapsed = Date.now() - startTime - pausedAccum;
-  if (nextSomniaIndex < somniaSchedule.length && elapsed >= somniaSchedule[nextSomniaIndex]) {
-    createObject('', 'somnia', 50 + Math.random() * 20);
-    nextSomniaIndex++;
+  if (now - lastLogoDrop >= LOGO_DROP_INTERVAL_MS) {
+    createObject('', 'somnia', 70 + Math.random() * 30);
+    createObject('', 'ape-logo', 70 + Math.random() * 30);
+    lastLogoDrop = now;
   }
 
   if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70); // max 230
@@ -436,9 +435,7 @@ function startGame() {
   
   lastFrameTime = null;
 
-  // build somnia schedule: first drop at 58s, then every 58s, total 10
-  somniaSchedule = Array.from({ length: SOMNIA_TOTAL }, (_, i) => (i + 1) * SOMNIA_INTERVAL_MS);
-  nextSomniaIndex = 0;
+  lastLogoDrop = startTime;
 
   timerInterval = setInterval(() => {
     if (isPaused) return;
