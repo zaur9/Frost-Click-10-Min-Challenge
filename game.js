@@ -72,7 +72,7 @@ let somniaSchedule = [];
 let nextSomniaIndex = 0;
 
 let lastIceSpawn = 0;
-const ICE_INTERVAL = 45 * 1000; // ровно 45 секунд
+const ICE_INTERVAL = 29 * 1000; // ровно 29 секунд
 
 // Time-based spawn settings
 const SPAWN_TICK_MS = 150; // run spawner ~6.7 times/sec, independent of FPS
@@ -248,12 +248,18 @@ function activateFreeze() {
   if (isFrozen) return;
 
   isFrozen = true;
+  const bounds = getPlayfieldBounds();
+  const playfieldWidth = Math.max(0, bounds.right - bounds.left);
+  const playfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
 
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
   Object.assign(overlay.style, {
-    position: 'absolute', top: '0', left: '0',
-    width: '100%', height: '100%',
+    position: 'absolute',
+    top: `${PLAYFIELD_TOP_OFFSET}px`,
+    left: `${bounds.left}px`,
+    width: `${playfieldWidth}px`,
+    height: `${playfieldHeight}px`,
     background: 'rgba(200, 240, 255, 0.3)',
     pointerEvents: 'none',
     zIndex: '5'
