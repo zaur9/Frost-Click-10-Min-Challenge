@@ -115,9 +115,32 @@ body {
   height: calc(100vh - var(--content-top));
   background: #2a5298;
   opacity: 1;
-  border-left: 1px solid rgba(255,255,255,0.35);
-  border-right: 1px solid rgba(255,255,255,0.35);
+  border-left: 1px solid rgba(255,255,255,0.12);
+  border-right: 1px solid rgba(255,255,255,0.12);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  overflow: hidden;
   z-index: 2;
+}
+
+#playfield-bg::before,
+#playfield-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 100%;
+  pointer-events: none;
+}
+
+#playfield-bg::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(42, 82, 152, 0) 0%, rgba(42, 82, 152, 0.55) 100%);
+}
+
+#playfield-bg::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(42, 82, 152, 0) 0%, rgba(42, 82, 152, 0.55) 100%);
 }
 
 .battle-side {
