@@ -51,10 +51,15 @@ let objects = [];
 let gameLoopId = null;
 let startTime = 0;
 let timerInterval = null;
-let spawnIntervalId = null;
 
 // frame timing
 let lastFrameTime = null;
+let spawnAccumulatorMs = 0;
+
+// Reuse flash nodes to reduce DOM churn/GC spikes.
+const FLASH_POOL_SIZE = 12;
+const flashPool = [];
+let flashPoolIndex = 0;
 
 // click hitbox padding (only bottom) to make fast objects easier to catch
 const HIT_PADDING_BOTTOM = 12;
@@ -138,6 +143,31 @@ function formatTime(ms) {
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
+function initFlashPool() {
+  if (flashPool.length > 0 || !game) return;
+  for (let i = 0; i < FLASH_POOL_SIZE; i++) {
+    const flash = document.createElement('div');
+    flash.className = 'neon-flash';
+    flash.style.display = 'none';
+    game.appendChild(flash);
+    flashPool.push(flash);
+  }
+}
+
+function showFlash(x, y) {
+  if (!game) return;
+  if (flashPool.length === 0) initFlashPool();
+  const flash = flashPool[flashPoolIndex];
+  flashPoolIndex = (flashPoolIndex + 1) % flashPool.length;
+
+  flash.style.left = `${x - 20}px`;
+  flash.style.top = `${y - 20}px`;
+  flash.style.display = 'block';
+  flash.style.animation = 'none';
+  void flash.offsetWidth; // force reflow to restart animation cleanly
+  flash.style.animation = 'neon-flash-anim 0.25s ease-out forwards';
+}
+
 // === CREATE OBJECT ===
 function createObject(emoji, type, speed) {
   if (!gameActive || isPaused) return;
@@ -210,12 +240,7 @@ game.addEventListener('click', (e) => {
     objects.splice(i, 1);
 
     // FLASH
-    const flash = document.createElement("div");
-    flash.className = "neon-flash";
-    flash.style.left = (rect.left + rect.width / 2 - 20) + "px";
-    flash.style.top = (rect.top + rect.height / 2 - 20) + "px";
-    game.appendChild(flash);
-    setTimeout(() => flash.remove(), 250);
+    showFlash(rect.left + rect.width / 2, rect.top + rect.height / 2);
 
     // FREEZE BONUS
     if (isFrozen) {
@@ -331,9 +356,24 @@ function endGame(isWin) {
 function gameLoop(timestamp) {
   if (!gameActive || isPaused) return;
 
-  if (lastFrameTime === null) lastFrameTime = timestamp;
-  const dt = (timestamp - lastFrameTime) / 1000; // seconds
+  if (lastFrameTime === null) {
+    lastFrameTime = timestamp;
+    gameLoopId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  const frameMs = timestamp - lastFrameTime;
+  const dt = frameMs / 1000; // seconds
   lastFrameTime = timestamp;
+
+  // Run spawner in the same RAF rhythm to reduce micro-stutter from timer drift.
+  if (!isFrozen) {
+    spawnAccumulatorMs += frameMs;
+    while (spawnAccumulatorMs >= SPAWN_TICK_MS) {
+      spawnTick();
+      spawnAccumulatorMs -= SPAWN_TICK_MS;
+    }
+  }
 
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
@@ -440,13 +480,13 @@ function startGame() {
 
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId) cancelAnimationFrame(gameLoopId);
-  if (spawnIntervalId) clearInterval(spawnIntervalId);
 
   startTime = Date.now();
 
   lastIceSpawn = startTime;
   
   lastFrameTime = null;
+  spawnAccumulatorMs = 0;
 
   lastSomniaDrop = startTime;
   lastApeDrop = startTime;
@@ -465,7 +505,6 @@ function startGame() {
     }
   }, 1000);
 
-  spawnIntervalId = setInterval(spawnTick, SPAWN_TICK_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
   updatePersonalBest();
 }
