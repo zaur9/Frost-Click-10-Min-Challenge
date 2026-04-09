@@ -56,11 +56,6 @@ let timerInterval = null;
 let lastFrameTime = null;
 let spawnAccumulatorMs = 0;
 
-// Reuse flash nodes to reduce DOM churn/GC spikes.
-const FLASH_POOL_SIZE = 12;
-const flashPool = [];
-let flashPoolIndex = 0;
-
 // click hitbox padding (only bottom) to make fast objects easier to catch
 const HIT_PADDING_BOTTOM = 12;
 const HIT_PADDING_SNOW_TOP = 12;
@@ -143,31 +138,6 @@ function formatTime(ms) {
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
-function initFlashPool() {
-  if (flashPool.length > 0 || !game) return;
-  for (let i = 0; i < FLASH_POOL_SIZE; i++) {
-    const flash = document.createElement('div');
-    flash.className = 'neon-flash';
-    flash.style.display = 'none';
-    game.appendChild(flash);
-    flashPool.push(flash);
-  }
-}
-
-function showFlash(x, y) {
-  if (!game) return;
-  if (flashPool.length === 0) initFlashPool();
-  const flash = flashPool[flashPoolIndex];
-  flashPoolIndex = (flashPoolIndex + 1) % flashPool.length;
-
-  flash.style.left = `${x - 20}px`;
-  flash.style.top = `${y - 20}px`;
-  flash.style.display = 'block';
-  flash.style.animation = 'none';
-  void flash.offsetWidth; // force reflow to restart animation cleanly
-  flash.style.animation = 'neon-flash-anim 0.25s ease-out forwards';
-}
-
 // === CREATE OBJECT ===
 function createObject(emoji, type, speed) {
   if (!gameActive || isPaused) return;
@@ -240,7 +210,12 @@ game.addEventListener('click', (e) => {
     objects.splice(i, 1);
 
     // FLASH
-    showFlash(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const flash = document.createElement('div');
+    flash.className = 'neon-flash';
+    flash.style.left = (rect.left + rect.width / 2 - 20) + 'px';
+    flash.style.top = (rect.top + rect.height / 2 - 20) + 'px';
+    game.appendChild(flash);
+    setTimeout(() => flash.remove(), 250);
 
     // FREEZE BONUS
     if (isFrozen) {
@@ -249,7 +224,7 @@ game.addEventListener('click', (e) => {
       else if (type === 'gift') score += 5;
       else if (type === 'ice') score += 2;
       else if (type === 'toy-green' || type === 'toy-purple') score += 2;
-      else if (type === 'somnia' || type === 'ape-logo') score += 20;
+      else if (type === 'somnia' || type === 'ape-logo') score += 10;
       updateScore();
       return;
     }
@@ -265,7 +240,7 @@ game.addEventListener('click', (e) => {
     } else if (type === 'toy-green' || type === 'toy-purple') {
       score += 2;
     } else if (type === 'somnia' || type === 'ape-logo') {
-      score += 20;
+      score += 10;
     } else if (type === 'gift') {
       score += 5;
     } else {
@@ -310,8 +285,13 @@ function activateFreeze() {
   const freezeTimer = document.createElement('div');
   freezeTimer.id = 'freeze-timer';
   Object.assign(freezeTimer.style, {
-    position: 'absolute', top: '50px', right: '20px',
-    color: '#a0e0ff', fontSize: '20px', zIndex: '10'
+    position: 'absolute',
+    top: `${PLAYFIELD_TOP_OFFSET + 10}px`,
+    left: `${bounds.left + playfieldWidth / 2}px`,
+    transform: 'translateX(-50%)',
+    color: '#a0e0ff',
+    fontSize: '20px',
+    zIndex: '10'
   });
   freezeTimer.textContent = 'Freeze: 5s';
   game.appendChild(freezeTimer);
@@ -407,10 +387,12 @@ function spawnTick() {
 
   if (now - lastSomniaDrop >= SOMNIA_DROP_INTERVAL_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
+    createObject('', 'somnia', 70 + Math.random() * 30);
     lastSomniaDrop = now;
   }
 
   if (now - lastApeDrop >= APE_DROP_INTERVAL_MS) {
+    createObject('', 'ape-logo', 70 + Math.random() * 30);
     createObject('', 'ape-logo', 70 + Math.random() * 30);
     lastApeDrop = now;
   }
