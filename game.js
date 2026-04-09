@@ -261,10 +261,13 @@ function activateFreeze() {
     width: `${playfieldWidth}px`,
     height: `${playfieldHeight}px`,
     background: `
-      radial-gradient(120% 90% at 10% 0%, rgba(215,245,255,0.42) 0%, rgba(170,220,255,0.10) 55%, rgba(120,180,235,0.06) 100%),
-      repeating-linear-gradient(128deg, rgba(215,245,255,0.14) 0 2px, rgba(180,230,255,0.02) 2px 16px),
-      repeating-linear-gradient(38deg, rgba(200,240,255,0.10) 0 1px, rgba(165,220,255,0.02) 1px 14px),
-      rgba(155,210,255,0.18)
+      radial-gradient(110% 90% at 14% 0%, rgba(226,247,255,0.48) 0%, rgba(187,228,255,0.12) 52%, rgba(136,187,238,0.07) 100%),
+      radial-gradient(80px 70px at 18% 24%, rgba(225,248,255,0.22) 0%, rgba(225,248,255,0) 72%),
+      radial-gradient(120px 90px at 72% 38%, rgba(215,242,255,0.17) 0%, rgba(215,242,255,0) 78%),
+      radial-gradient(90px 80px at 36% 74%, rgba(225,248,255,0.16) 0%, rgba(225,248,255,0) 75%),
+      repeating-linear-gradient(132deg, rgba(226,247,255,0.13) 0 1px, rgba(164,212,246,0.03) 1px 22px),
+      repeating-linear-gradient(37deg, rgba(226,247,255,0.09) 0 1px, rgba(164,212,246,0.02) 1px 26px),
+      rgba(150,206,248,0.2)
     `,
     pointerEvents: 'none',
     zIndex: '5'
