@@ -49,6 +49,36 @@ body {
   font-size: 14px;
 }
 
+#start-connect-wallet,
+#start-save-nickname {
+  width: 170px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+#start-wallet-status {
+  min-height: 16px;
+  font-size: 12px;
+  color: #d6e6ff;
+  text-align: center;
+  margin-top: -6px;
+}
+
+#start-nickname-input {
+  width: 170px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(77, 255, 204, 0.45);
+  background: rgba(8, 18, 48, 0.45);
+  color: #ffffff;
+  outline: none;
+}
+
+#start-nickname-input::placeholder {
+  color: rgba(223, 241, 255, 0.72);
+}
+
 #games-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(220px, 260px));
