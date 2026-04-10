@@ -559,9 +559,9 @@ async function handleConnectWallet(targetChainId) {
   }
 }
 
-async function submitCurrentScore() {
-  if (!contract || !web3) {
-    alert('Connect wallet first');
+async function submitCurrentScore(targetNetworkKey = null) {
+  if (typeof window.ethereum === 'undefined') {
+    alert('Please install MetaMask or Somnia Wallet!');
     return;
   }
 
@@ -571,22 +571,42 @@ async function submitCurrentScore() {
     return;
   }
 
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-  const account = accounts[0];
-  if (!account) {
-    alert('Connect wallet first');
-    return;
-  }
-
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  const chainIdNum = parseInt(chainId, 16);
-  const networkCfg = getNetworkConfigByChainId(chainIdNum);
-  if (!networkCfg) {
-    alert(`Wrong chain, switch to ${getReadableChainNames()}`);
-    return;
-  }
-
   try {
+    const requestedChainId = targetNetworkKey === 'ape'
+      ? CONFIG.APECHAIN_CHAIN_ID
+      : targetNetworkKey === 'somnia'
+        ? CONFIG.SOMNIA_CHAIN_ID
+        : null;
+
+    if (requestedChainId !== null) {
+      const hexChainId = `0x${Number(requestedChainId).toString(16)}`;
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }]
+      });
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts && accounts[0];
+    if (!account) {
+      alert('Connect wallet first');
+      return;
+    }
+
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainIdNum = parseInt(chainId, 16);
+    const networkCfg = getNetworkConfigByChainId(chainIdNum);
+    if (!networkCfg) {
+      alert(`Wrong chain, switch to ${getReadableChainNames()}`);
+      return;
+    }
+
+    web3 = new Web3(window.ethereum);
+    contract = new web3.eth.Contract(contractABI, networkCfg.contractAddress);
+    window.contract = contract;
+    activeNetworkCfg = networkCfg;
+    setUserAccount(account);
+
     const timestamp = Math.floor(Date.now() / 1000);
 
     const messageHash = web3.utils.soliditySha3(
@@ -627,7 +647,9 @@ if (apeConnectWalletBtn) {
 if (startConnectWalletBtn) {
   startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
 }
-window.addEventListener('submit-score-request', submitCurrentScore);
+window.addEventListener('submit-score-request', (event) => {
+  submitCurrentScore(event?.detail?.network || null);
+});
 
 
 // Leaderboard
