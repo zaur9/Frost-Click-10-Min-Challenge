@@ -6,12 +6,12 @@ let contract = null;
 let walletListenersAttached = false;
 let activeNetworkCfg = null;
 let currentDisplayName = null;
+let selectedProvider = null;
 
 const connectWalletBtn = document.getElementById('connect-wallet');
 const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
 const startNicknameInput = document.getElementById('start-nickname-input');
-const startSaveNicknameBtn = document.getElementById('start-save-nickname');
 const startWalletStatusEl = document.getElementById('start-wallet-status');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 const apeTotalEl = document.getElementById('ape-total');
@@ -204,6 +204,42 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function getInjectedProvider() {
+  return selectedProvider || window.ethereum || null;
+}
+
+function getProviderLabel(provider) {
+  if (!provider) return 'Unknown Wallet';
+  if (provider.isMetaMask) return 'MetaMask';
+  if (provider.isRabby) return 'Rabby';
+  if (provider.isOkxWallet || provider.isOKExWallet) return 'OKX Wallet';
+  if (provider.isCoinbaseWallet) return 'Coinbase Wallet';
+  return provider.name || provider.providerName || 'Injected Wallet';
+}
+
+async function chooseWalletProvider() {
+  const root = window.ethereum;
+  if (!root) return null;
+
+  const providers = Array.isArray(root.providers) && root.providers.length
+    ? root.providers
+    : [root];
+
+  if (providers.length === 1) {
+    selectedProvider = providers[0];
+    return selectedProvider;
+  }
+
+  const options = providers.map((p, i) => `${i + 1}. ${getProviderLabel(p)}`).join('\n');
+  const raw = window.prompt(`Choose wallet:\n${options}\n\nEnter number:`, '1');
+  const idx = Number(raw);
+  if (!Number.isInteger(idx) || idx < 1 || idx > providers.length) {
+    return null;
+  }
+  selectedProvider = providers[idx - 1];
+  return selectedProvider;
 }
 
 async function tryReadNickname(addr, readContract = contract) {
@@ -422,7 +458,8 @@ async function maybeSetupNickname(account) {
 }
 
 async function saveNicknameFromStart() {
-  if (!window.ethereum) {
+  const provider = getInjectedProvider();
+  if (!provider) {
     alert('Please install MetaMask or Somnia Wallet!');
     return;
   }
@@ -442,7 +479,7 @@ async function saveNicknameFromStart() {
   if (!ready || !contract || !web3) return;
 
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
     const account = accounts && accounts[0];
     if (!account) {
       alert('Connect wallet first');
@@ -493,7 +530,8 @@ async function refreshBattleTotals() {
 }
 
 async function initWeb3(targetChainId = null) {
-  if (typeof window.ethereum === 'undefined') {
+  const provider = getInjectedProvider();
+  if (!provider) {
     alert('Please install MetaMask or Somnia Wallet!');
     return false;
   }
@@ -502,7 +540,7 @@ async function initWeb3(targetChainId = null) {
     if (targetChainId !== null) {
       const hexChainId = `0x${Number(targetChainId).toString(16)}`;
       try {
-        await window.ethereum.request({
+        await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: hexChainId }]
         });
@@ -512,7 +550,7 @@ async function initWeb3(targetChainId = null) {
       }
     }
 
-    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainIdHex = await provider.request({ method: 'eth_chainId' });
     const chainIdNum = parseInt(chainIdHex, 16);
     const networkCfg = getNetworkConfigByChainId(chainIdNum);
     if (!networkCfg) {
@@ -521,7 +559,7 @@ async function initWeb3(targetChainId = null) {
     }
     activeNetworkCfg = networkCfg;
 
-    web3 = new Web3(window.ethereum);
+    web3 = new Web3(provider);
 
     // create contract instance once web3 is ready
     try {
@@ -534,7 +572,7 @@ async function initWeb3(targetChainId = null) {
     }
 
     if (!walletListenersAttached) {
-      ethereum.on('accountsChanged', (accounts) => {
+      provider.on('accountsChanged', (accounts) => {
         (async () => {
         const addr = (accounts && accounts.length) ? accounts[0] : null;
         currentDisplayName = addr ? displayNameFor(addr, await tryReadNickname(addr, contract)) : null;
@@ -546,7 +584,7 @@ async function initWeb3(targetChainId = null) {
         })();
       });
 
-      ethereum.on('chainChanged', () => {
+      provider.on('chainChanged', () => {
         resetWalletButtonLabels();
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
         if (startNicknameInput) startNicknameInput.value = '';
@@ -571,11 +609,17 @@ async function initWeb3(targetChainId = null) {
 
 
 async function handleConnectWallet(targetChainId) {
+  if (!selectedProvider) {
+    const picked = await chooseWalletProvider();
+    if (!picked) return;
+  }
+
   const ready = await initWeb3(targetChainId);
   if (!ready) return;
 
   try {
-    const accounts = await window.ethereum.request({
+    const provider = getInjectedProvider();
+    const accounts = await provider.request({
       method: 'eth_requestAccounts'
     });
 
@@ -614,7 +658,8 @@ async function handleConnectWallet(targetChainId) {
 }
 
 async function submitCurrentScore(targetNetworkKey = null) {
-  if (typeof window.ethereum === 'undefined') {
+  const provider = getInjectedProvider();
+  if (!provider) {
     alert('Please install MetaMask or Somnia Wallet!');
     return;
   }
@@ -634,20 +679,20 @@ async function submitCurrentScore(targetNetworkKey = null) {
 
     if (requestedChainId !== null) {
       const hexChainId = `0x${Number(requestedChainId).toString(16)}`;
-      await window.ethereum.request({
+      await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: hexChainId }]
       });
     }
 
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
     const account = accounts && accounts[0];
     if (!account) {
       alert('Connect wallet first');
       return;
     }
 
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainId = await provider.request({ method: 'eth_chainId' });
     const chainIdNum = parseInt(chainId, 16);
     const networkCfg = getNetworkConfigByChainId(chainIdNum);
     if (!networkCfg) {
@@ -655,7 +700,7 @@ async function submitCurrentScore(targetNetworkKey = null) {
       return;
     }
 
-    web3 = new Web3(window.ethereum);
+    web3 = new Web3(provider);
     contract = new web3.eth.Contract(contractABI, networkCfg.contractAddress);
     window.contract = contract;
     activeNetworkCfg = networkCfg;
@@ -671,7 +716,7 @@ async function submitCurrentScore(targetNetworkKey = null) {
       { t: 'uint256', v: networkCfg.chainId }
     );
 
-    const signature = await window.ethereum.request({
+    const signature = await provider.request({
       method: 'personal_sign',
       params: [messageHash, account]
     });
@@ -701,8 +746,13 @@ if (apeConnectWalletBtn) {
 if (startConnectWalletBtn) {
   startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(null));
 }
-if (startSaveNicknameBtn) {
-  startSaveNicknameBtn.addEventListener('click', saveNicknameFromStart);
+if (startNicknameInput) {
+  startNicknameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveNicknameFromStart();
+    }
+  });
 }
 window.addEventListener('submit-score-request', (event) => {
   submitCurrentScore(event?.detail?.network || null);
