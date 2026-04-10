@@ -313,33 +313,63 @@ async function readLeaderboardFromContract(readContract) {
   return { top10, total };
 }
 
-async function fetchLeaderboardViaRpc(rpcUrl, contractAddress, expectedChainId = null) {
-  if (!rpcUrl || !contractAddress || /^0x0{40}$/i.test(contractAddress)) {
-    throw new Error('Missing RPC URL or contract address');
+function getRpcCandidates(networkKey, configuredRpcUrl) {
+  const candidates = [];
+  const add = (url) => {
+    if (!url) return;
+    const normalized = String(url).trim();
+    if (!normalized) return;
+    if (!candidates.includes(normalized)) candidates.push(normalized);
+  };
+
+  add(configuredRpcUrl);
+
+  if (networkKey === 'somnia') {
+    add('https://dream-rpc.somnia.network/');
+  }
+  if (networkKey === 'ape') {
+    add('https://rpc.apechain.com/http');
+    add('https://apechain.calderachain.xyz/http');
+    add('https://apechain.drpc.org');
   }
 
-  try {
-    const readWeb3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
-    const readContract = new readWeb3.eth.Contract(contractABI, contractAddress);
-    return await readLeaderboardFromContract(readContract);
-  } catch (rpcErr) {
-    // Browser RPC reads can fail due to CORS/rate limits.
-    // Fallback: read through injected wallet provider on the active chain.
-    if (!window.ethereum) throw rpcErr;
+  return candidates;
+}
 
+async function fetchLeaderboardViaRpc(networkKey, rpcUrl, contractAddress, expectedChainId = null) {
+  if (!contractAddress || /^0x0{40}$/i.test(contractAddress)) {
+    throw new Error('Missing contract address');
+  }
+
+  const rpcCandidates = getRpcCandidates(networkKey, rpcUrl);
+  let lastRpcError = null;
+
+  for (const rpcCandidate of rpcCandidates) {
     try {
-      const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-      const currentChainId = parseInt(chainIdHex, 16);
-      if (expectedChainId !== null && currentChainId !== Number(expectedChainId)) {
-        throw rpcErr;
-      }
-
-      const walletWeb3 = new Web3(window.ethereum);
-      const walletReadContract = new walletWeb3.eth.Contract(contractABI, contractAddress);
-      return await readLeaderboardFromContract(walletReadContract);
-    } catch (_) {
-      throw rpcErr;
+      const readWeb3 = new Web3(new Web3.providers.HttpProvider(rpcCandidate));
+      const readContract = new readWeb3.eth.Contract(contractABI, contractAddress);
+      return await readLeaderboardFromContract(readContract);
+    } catch (rpcErr) {
+      lastRpcError = rpcErr;
     }
+  }
+
+  // Browser RPC reads can fail due to CORS/rate limits.
+  // Fallback: read through injected wallet provider on the active chain.
+  if (!window.ethereum) throw (lastRpcError || new Error('No available RPC'));
+
+  try {
+    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+    const currentChainId = parseInt(chainIdHex, 16);
+    if (expectedChainId !== null && currentChainId !== Number(expectedChainId)) {
+      throw (lastRpcError || new Error('Wallet is on a different chain'));
+    }
+
+    const walletWeb3 = new Web3(window.ethereum);
+    const walletReadContract = new walletWeb3.eth.Contract(contractABI, contractAddress);
+    return await readLeaderboardFromContract(walletReadContract);
+  } catch (_) {
+    throw (lastRpcError || new Error('Failed to read leaderboard'));
   }
 }
 
@@ -378,8 +408,8 @@ async function maybeSetupNickname(account) {
 async function refreshBattleTotals() {
   try {
     const [apeData, somniaData] = await Promise.allSettled([
-      fetchLeaderboardViaRpc(CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS, CONFIG.APECHAIN_CHAIN_ID),
-      fetchLeaderboardViaRpc(CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS, CONFIG.SOMNIA_CHAIN_ID)
+      fetchLeaderboardViaRpc('ape', CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS, CONFIG.APECHAIN_CHAIN_ID),
+      fetchLeaderboardViaRpc('somnia', CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS, CONFIG.SOMNIA_CHAIN_ID)
     ]);
 
     if (apeData.status === 'fulfilled') {
@@ -604,8 +634,8 @@ async function handleShowLeaderboard() {
 
   try {
     const [apeData, somniaData] = await Promise.allSettled([
-      fetchLeaderboardViaRpc(CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS, CONFIG.APECHAIN_CHAIN_ID),
-      fetchLeaderboardViaRpc(CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS, CONFIG.SOMNIA_CHAIN_ID)
+      fetchLeaderboardViaRpc('ape', CONFIG.APECHAIN_RPC_URL, CONFIG.APECHAIN_CONTRACT_ADDRESS, CONFIG.APECHAIN_CHAIN_ID),
+      fetchLeaderboardViaRpc('somnia', CONFIG.SOMNIA_RPC_URL, CONFIG.CONTRACT_ADDRESS, CONFIG.SOMNIA_CHAIN_ID)
     ]);
 
     const renderList = (dataResult) => {
