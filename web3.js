@@ -283,7 +283,21 @@ async function fetchLeaderboardViaRpc(rpcUrl, contractAddress) {
 
   const readWeb3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
   const readContract = new readWeb3.eth.Contract(contractABI, contractAddress);
-  const leaderboard = await readContract.methods.getLeaderboard().call();
+  let leaderboard = [];
+  try {
+    leaderboard = await readContract.methods.getLeaderboard().call();
+  } catch (_) {
+    // Backward-compatible fallback for contracts without getLeaderboard()
+    const countRaw = await readContract.methods.entriesCount().call();
+    const count = Math.min(Number(countRaw) || 0, 100);
+    if (count > 0) {
+      const calls = [];
+      for (let i = 0; i < count; i++) {
+        calls.push(readContract.methods.leaderboard(i).call());
+      }
+      leaderboard = await Promise.all(calls);
+    }
+  }
   const sorted = getValidEntries(leaderboard);
 
   const top10Raw = sorted.slice(0, 10);
