@@ -176,7 +176,7 @@ body {
 .ape-brand {
   position: absolute;
   top: calc(-1 * var(--content-top) + var(--hud-top));
-  left: 194px;
+  left: 12px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -253,7 +253,7 @@ body {
 .somnia-brand {
   position: absolute;
   top: calc(-1 * var(--content-top) + var(--hud-top));
-  right: 194px;
+  right: 12px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
