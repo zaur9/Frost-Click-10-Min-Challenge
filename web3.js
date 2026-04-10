@@ -325,7 +325,10 @@ function getRpcCandidates(networkKey, configuredRpcUrl) {
   add(configuredRpcUrl);
 
   if (networkKey === 'somnia') {
-    add('https://dream-rpc.somnia.network/');
+    add('https://api.infra.mainnet.somnia.network/');
+    add('https://somnia.publicnode.com/');
+    add('https://somnia-json-rpc.stakely.io/');
+    add('https://www.ankr.com/rpc/somnia/');
   }
   if (networkKey === 'ape') {
     add('https://rpc.apechain.com/http');
