@@ -10,6 +10,9 @@ let currentDisplayName = null;
 const connectWalletBtn = document.getElementById('connect-wallet');
 const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
+const startNicknameInput = document.getElementById('start-nickname-input');
+const startSaveNicknameBtn = document.getElementById('start-save-nickname');
+const startWalletStatusEl = document.getElementById('start-wallet-status');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
 const apeTotalEl = document.getElementById('ape-total');
 const somniaTotalEl = document.getElementById('somnia-total');
@@ -237,6 +240,16 @@ function updateWalletButtonLabelsForActiveNetwork(addr) {
   }
 }
 
+function updateStartWalletStatus(account, networkCfg) {
+  if (!startWalletStatusEl) return;
+  if (!account) {
+    startWalletStatusEl.textContent = 'Wallet: not connected';
+    return;
+  }
+  const networkName = networkCfg?.name || 'Unknown network';
+  startWalletStatusEl.textContent = `Wallet: ${shortenAddress(account)} (${networkName})`;
+}
+
 function getValidEntries(entries) {
   return entries
     .filter(e => e.player !== '0x0000000000000000000000000000000000000000' && Number(e.score) > 0)
@@ -408,6 +421,47 @@ async function maybeSetupNickname(account) {
   }
 }
 
+async function saveNicknameFromStart() {
+  if (!window.ethereum) {
+    alert('Please install MetaMask or Somnia Wallet!');
+    return;
+  }
+  if (!startNicknameInput) return;
+
+  const nickname = normalizeNickname(startNicknameInput.value);
+  if (!nickname) {
+    alert('Enter nickname first');
+    return;
+  }
+  if (nickname.length < 3 || nickname.length > 16) {
+    alert('Nickname length must be 3..16 characters');
+    return;
+  }
+
+  const ready = await initWeb3(null);
+  if (!ready || !contract || !web3) return;
+
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts && accounts[0];
+    if (!account) {
+      alert('Connect wallet first');
+      return;
+    }
+
+    await contract.methods.setNickname(nickname).send({ from: account });
+    currentDisplayName = displayNameFor(account, nickname);
+    updateWalletButtonLabelsForActiveNetwork(account);
+    updateStartWalletStatus(account, activeNetworkCfg);
+    if (startConnectWalletBtn) startConnectWalletBtn.textContent = currentDisplayName;
+    alert('Nickname saved!');
+    await refreshBattleTotals();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to set nickname');
+  }
+}
+
 async function refreshBattleTotals() {
   try {
     const [apeData, somniaData] = await Promise.allSettled([
@@ -486,6 +540,8 @@ async function initWeb3(targetChainId = null) {
         currentDisplayName = addr ? displayNameFor(addr, await tryReadNickname(addr, contract)) : null;
         updateWalletButtonLabelsForActiveNetwork(addr);
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr ? (currentDisplayName || shortenAddress(addr)) : 'Connect Wallet';
+        if (startNicknameInput) startNicknameInput.value = addr ? (await tryReadNickname(addr, contract)) : '';
+        updateStartWalletStatus(addr, activeNetworkCfg);
         setUserAccount(addr);
         })();
       });
@@ -493,6 +549,8 @@ async function initWeb3(targetChainId = null) {
       ethereum.on('chainChanged', () => {
         resetWalletButtonLabels();
         if (startConnectWalletBtn) startConnectWalletBtn.textContent = "Connect Wallet";
+        if (startNicknameInput) startNicknameInput.value = '';
+        updateStartWalletStatus(null, null);
         contract = null;
         window.contract = null;
         activeNetworkCfg = null;
@@ -530,6 +588,10 @@ async function handleConnectWallet(targetChainId) {
     if (startConnectWalletBtn) {
       startConnectWalletBtn.textContent = currentDisplayName || shortenAddress(account);
     }
+    updateStartWalletStatus(account, activeNetworkCfg);
+    if (startNicknameInput) {
+      startNicknameInput.value = await tryReadNickname(account, contract);
+    }
 
     // ensure contract instance exists
     if (!contract) {
@@ -544,14 +606,6 @@ async function handleConnectWallet(targetChainId) {
       }
     }
 
-    const maybeNick = await maybeSetupNickname(account);
-    if (maybeNick) {
-      currentDisplayName = displayNameFor(account, maybeNick);
-      updateWalletButtonLabelsForActiveNetwork(account);
-      if (startConnectWalletBtn) {
-        startConnectWalletBtn.textContent = currentDisplayName;
-      }
-    }
     await refreshBattleTotals();
 
   } catch (error) {
@@ -645,7 +699,10 @@ if (apeConnectWalletBtn) {
   apeConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.APECHAIN_CHAIN_ID));
 }
 if (startConnectWalletBtn) {
-  startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(CONFIG.SOMNIA_CHAIN_ID));
+  startConnectWalletBtn.addEventListener('click', () => handleConnectWallet(null));
+}
+if (startSaveNicknameBtn) {
+  startSaveNicknameBtn.addEventListener('click', saveNicknameFromStart);
 }
 window.addEventListener('submit-score-request', (event) => {
   submitCurrentScore(event?.detail?.network || null);
