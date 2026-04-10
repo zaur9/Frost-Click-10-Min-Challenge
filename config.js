@@ -7,7 +7,7 @@ export const CONFIG = {
   SOMNIA_CHAIN_ID: 5031,
   APECHAIN_CHAIN_ID: 33139,
 
-  // Public RPCs for read-only battle leaderboard (replace ApeChain URL with your current RPC)
+  // Public RPCs for read-only battle leaderboard
   SOMNIA_RPC_URL: "https://dream-rpc.somnia.network/",
-  APECHAIN_RPC_URL: "",
+  APECHAIN_RPC_URL: "https://rpc.apechain.com/http",
 };
