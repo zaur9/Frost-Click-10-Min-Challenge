@@ -89,7 +89,8 @@ const resultTitle = document.getElementById('result-title');
 const finalScoreEl = document.getElementById('final-score');
 const timeSurvivedEl = document.getElementById('time-survived');
 const restartBtn = document.getElementById('restart');
-const gameOverSubmitBtn = document.getElementById('gameover-submit-score');
+const gameOverSubmitApeBtn = document.getElementById('gameover-submit-ape');
+const gameOverSubmitSomniaBtn = document.getElementById('gameover-submit-somnia');
 const pauseBtn = document.getElementById('pause-btn');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
@@ -326,9 +327,8 @@ function endGame(isWin) {
   timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
 
   gameOverEl.style.display = 'block';
-  if (gameOverSubmitBtn) {
-    gameOverSubmitBtn.style.display = userAccount ? 'inline-block' : 'none';
-  }
+  if (gameOverSubmitApeBtn) gameOverSubmitApeBtn.style.display = 'inline-block';
+  if (gameOverSubmitSomniaBtn) gameOverSubmitSomniaBtn.style.display = 'inline-block';
 
 }
 
@@ -533,8 +533,13 @@ restartBtn.addEventListener('click', () => {
   startGame();
 });
 
-if (gameOverSubmitBtn) {
-  gameOverSubmitBtn.addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('submit-score-request'));
+if (gameOverSubmitApeBtn) {
+  gameOverSubmitApeBtn.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('submit-score-request', { detail: { network: 'ape' } }));
+  });
+}
+if (gameOverSubmitSomniaBtn) {
+  gameOverSubmitSomniaBtn.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('submit-score-request', { detail: { network: 'somnia' } }));
   });
 }
