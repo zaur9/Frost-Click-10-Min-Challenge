@@ -5,6 +5,7 @@ let web3 = null;
 let contract = null;
 let walletListenersAttached = false;
 let activeNetworkCfg = null;
+let currentDisplayName = null;
 
 const connectWalletBtn = document.getElementById('connect-wallet');
 const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
@@ -106,6 +107,50 @@ const contractABI = [
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+
+  {
+    "inputs": [],
+    "name": "globalTotalScore",
+    "outputs": [
+      { "internalType": "uint128", "name": "", "type": "uint128" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "totalScoreOf",
+    "outputs": [
+      { "internalType": "uint64", "name": "", "type": "uint64" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "nicknameOf",
+    "outputs": [
+      { "internalType": "string", "name": "", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+
+  {
+    "inputs": [
+      { "internalType": "string", "name": "nickname_", "type": "string" }
+    ],
+    "name": "setNickname",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   }
 ]
 
@@ -139,6 +184,35 @@ function shortenAddress(addr) {
   return addr.slice(0, 6) + '...' + addr.slice(-4);
 }
 
+function normalizeNickname(value) {
+  if (!value) return '';
+  return String(value).trim();
+}
+
+function displayNameFor(addr, nickname) {
+  const n = normalizeNickname(nickname);
+  return n || shortenAddress(addr);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+async function tryReadNickname(addr, readContract = contract) {
+  if (!addr || !readContract || !readContract.methods || !readContract.methods.nicknameOf) return '';
+  try {
+    const nick = await readContract.methods.nicknameOf(addr).call();
+    return normalizeNickname(nick);
+  } catch (_) {
+    return '';
+  }
+}
+
 function resetWalletButtonLabels() {
   if (connectWalletBtn) connectWalletBtn.textContent = 'Connect Wallet';
   if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = 'Connect Wallet';
@@ -150,11 +224,13 @@ function updateWalletButtonLabelsForActiveNetwork(addr) {
     return;
   }
 
+  const label = currentDisplayName || shortenAddress(addr);
+
   if (activeNetworkCfg.key === 'ape') {
-    if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = shortenAddress(addr);
+    if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = label;
     if (connectWalletBtn) connectWalletBtn.textContent = 'Connect Wallet';
   } else if (activeNetworkCfg.key === 'somnia') {
-    if (connectWalletBtn) connectWalletBtn.textContent = shortenAddress(addr);
+    if (connectWalletBtn) connectWalletBtn.textContent = label;
     if (apeConnectWalletBtn) apeConnectWalletBtn.textContent = 'Connect Wallet';
   } else {
     resetWalletButtonLabels();
@@ -179,17 +255,25 @@ function setTeamTotal(el, title, value, isError = false) {
 function setSideTopList(el, entries, hasError = false) {
   if (!el) return;
   if (hasError) {
-    el.innerHTML = '<li>N/A</li>';
+    el.textContent = '';
+    const li = document.createElement('li');
+    li.textContent = 'N/A';
+    el.appendChild(li);
     return;
   }
   if (!entries || !entries.length) {
-    el.innerHTML = '<li>No scores yet</li>';
+    el.textContent = '';
+    const li = document.createElement('li');
+    li.textContent = 'No scores yet';
+    el.appendChild(li);
     return;
   }
-  el.innerHTML = entries
-    .slice(0, 10)
-    .map((entry) => `<li>${shortenAddress(entry.player)}: ${entry.score}</li>`)
-    .join('');
+  el.textContent = '';
+  entries.slice(0, 10).forEach((entry) => {
+    const li = document.createElement('li');
+    li.textContent = `${displayNameFor(entry.player, entry.nickname)}: ${entry.score}`;
+    el.appendChild(li);
+  });
 }
 
 async function fetchLeaderboardViaRpc(rpcUrl, contractAddress) {
@@ -201,11 +285,58 @@ async function fetchLeaderboardViaRpc(rpcUrl, contractAddress) {
   const readContract = new readWeb3.eth.Contract(contractABI, contractAddress);
   const leaderboard = await readContract.methods.getLeaderboard().call();
   const sorted = getValidEntries(leaderboard);
-  const total = sorted.reduce((sum, item) => sum + Number(item.score), 0);
+
+  const top10Raw = sorted.slice(0, 10);
+  const top10 = await Promise.all(
+    top10Raw.map(async (entry) => {
+      const nickname = await tryReadNickname(entry.player, readContract);
+      return { ...entry, nickname };
+    })
+  );
+
+  let total = 0;
+  try {
+    total = Number(await readContract.methods.globalTotalScore().call());
+  } catch (_) {
+    // Backward-compatible fallback for old contracts without globalTotalScore
+    total = sorted.reduce((sum, item) => sum + Number(item.score), 0);
+  }
   return {
-    top10: sorted.slice(0, 10),
+    top10,
     total
   };
+}
+
+async function maybeSetupNickname(account) {
+  if (!account || !contract) return '';
+
+  const existing = await tryReadNickname(account, contract);
+  if (existing) return existing;
+
+  const askKey = `nick_prompted:${activeNetworkCfg?.chainId || 'unknown'}:${account.toLowerCase()}`;
+  if (localStorage.getItem(askKey) === '1') return '';
+
+  const raw = window.prompt('Enter your nickname (3-16 chars):', '');
+  const nickname = normalizeNickname(raw);
+
+  if (!nickname) {
+    localStorage.setItem(askKey, '1');
+    return '';
+  }
+  if (nickname.length < 3 || nickname.length > 16) {
+    alert('Nickname length must be 3..16 characters');
+    localStorage.setItem(askKey, '1');
+    return '';
+  }
+
+  try {
+    await contract.methods.setNickname(nickname).send({ from: account });
+    return nickname;
+  } catch (e) {
+    console.error(e);
+    alert('Failed to set nickname');
+    return '';
+  }
 }
 
 async function refreshBattleTotals() {
@@ -281,10 +412,13 @@ async function initWeb3(targetChainId = null) {
 
     if (!walletListenersAttached) {
       ethereum.on('accountsChanged', (accounts) => {
+        (async () => {
         const addr = (accounts && accounts.length) ? accounts[0] : null;
+        currentDisplayName = addr ? displayNameFor(addr, await tryReadNickname(addr, contract)) : null;
         updateWalletButtonLabelsForActiveNetwork(addr);
-        if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr ? shortenAddress(addr) : 'Connect Wallet';
+        if (startConnectWalletBtn) startConnectWalletBtn.textContent = addr ? (currentDisplayName || shortenAddress(addr)) : 'Connect Wallet';
         setUserAccount(addr);
+        })();
       });
 
       ethereum.on('chainChanged', () => {
@@ -293,6 +427,7 @@ async function initWeb3(targetChainId = null) {
         contract = null;
         window.contract = null;
         activeNetworkCfg = null;
+        currentDisplayName = null;
         setUserAccount(null);
       });
 
@@ -320,9 +455,11 @@ async function handleConnectWallet(targetChainId) {
     const account = accounts[0];
     setUserAccount(account);
 
+    currentDisplayName = displayNameFor(account, await tryReadNickname(account, contract));
+
     updateWalletButtonLabelsForActiveNetwork(account);
     if (startConnectWalletBtn) {
-      startConnectWalletBtn.textContent = shortenAddress(account);
+      startConnectWalletBtn.textContent = currentDisplayName || shortenAddress(account);
     }
 
     // ensure contract instance exists
@@ -337,6 +474,16 @@ async function handleConnectWallet(targetChainId) {
         window.contract = null;
       }
     }
+
+    const maybeNick = await maybeSetupNickname(account);
+    if (maybeNick) {
+      currentDisplayName = displayNameFor(account, maybeNick);
+      updateWalletButtonLabelsForActiveNetwork(account);
+      if (startConnectWalletBtn) {
+        startConnectWalletBtn.textContent = currentDisplayName;
+      }
+    }
+    await refreshBattleTotals();
 
   } catch (error) {
     console.error(error);
@@ -433,7 +580,7 @@ async function handleShowLeaderboard() {
         return '<p>No scores yet</p>';
       }
       const listItems = dataResult.value.top10
-        .map((e) => `<li>${shortenAddress(e.player)}: ${e.score}</li>`)
+        .map((e) => `<li>${escapeHtml(displayNameFor(e.player, e.nickname))}: ${Number(e.score)}</li>`)
         .join('');
       return `<ol>${listItems}</ol>`;
     };
