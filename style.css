@@ -528,7 +528,9 @@ body {
 #show-leaderboard,
 #resume-btn,
 #restart,
-#gameover-submit-score {
+#gameover-submit-score,
+#gameover-submit-ape,
+#gameover-submit-somnia {
   border-radius: 10px;
   background: rgba(77,255,204,0.25);
   border: 1px solid rgba(77,255,204,0.35);
@@ -547,13 +549,17 @@ body {
 #show-leaderboard:hover,
 #resume-btn:hover,
 #restart:hover,
-#gameover-submit-score:hover {
+#gameover-submit-score:hover,
+#gameover-submit-ape:hover,
+#gameover-submit-somnia:hover {
   background: rgba(77,255,204,0.45);
   box-shadow: 0 0 12px rgba(77,255,204,0.7);
 }
 
 #restart,
-#gameover-submit-score {
+#gameover-submit-score,
+#gameover-submit-ape,
+#gameover-submit-somnia {
   width: 170px;
   padding: 10px 14px;
   font-size: 14px;
