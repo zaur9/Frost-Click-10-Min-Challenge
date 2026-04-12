@@ -1,0 +1,12 @@
+export const CONFIG = {
+  CONTRACT_ADDRESS: '0x1B6fCe675a504078a2324E6e84e521C2588dcf6B',
+  APECHAIN_CONTRACT_ADDRESS: '0xd65b585aaE9cCd4547fF7C209949A271E969E8a5',
+
+  GAME_DURATION: 10 * 60 * 1000,
+
+  SOMNIA_CHAIN_ID: 5031,
+  APECHAIN_CHAIN_ID: 33139,
+
+  SOMNIA_RPC_URL: 'https://api.infra.mainnet.somnia.network/',
+  APECHAIN_RPC_URL: 'https://rpc.apechain.com/http',
+} as const;
