@@ -11,6 +11,7 @@ let selectedProvider = null;
 const connectWalletBtn = document.getElementById('connect-wallet');
 const apeConnectWalletBtn = document.getElementById('ape-connect-wallet');
 const startConnectWalletBtn = document.getElementById('start-connect-wallet');
+const startSetNicknameBtn = document.getElementById('start-set-nickname');
 const startNicknameInput = document.getElementById('start-nickname-input');
 const startWalletStatusEl = document.getElementById('start-wallet-status');
 const startShowLeaderboardBtn = document.getElementById('start-show-leaderboard');
@@ -463,9 +464,12 @@ async function saveNicknameFromStart() {
     alert('Please install MetaMask or Somnia Wallet!');
     return;
   }
-  if (!startNicknameInput) return;
 
-  const nickname = normalizeNickname(startNicknameInput.value);
+  let nickname = startNicknameInput ? normalizeNickname(startNicknameInput.value) : '';
+  if (!nickname) {
+    const raw = window.prompt('Enter your nickname (3-16 characters):', '');
+    nickname = normalizeNickname(raw);
+  }
   if (!nickname) {
     alert('Enter nickname first');
     return;
@@ -753,6 +757,9 @@ if (startNicknameInput) {
       saveNicknameFromStart();
     }
   });
+}
+if (startSetNicknameBtn) {
+  startSetNicknameBtn.addEventListener('click', () => saveNicknameFromStart());
 }
 window.addEventListener('submit-score-request', (event) => {
   submitCurrentScore(event?.detail?.network || null);
