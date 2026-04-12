@@ -10,7 +10,10 @@
 
   <!-- ====== START SCREEN ====== -->
   <div id="start-screen">
-    <button id="start-connect-wallet">Connect Wallet</button>
+    <div id="start-header-actions">
+      <button type="button" id="start-set-nickname">Задать никнейм</button>
+      <button type="button" id="start-connect-wallet">Connect Wallet</button>
+    </div>
     <h1>Mini Games</h1>
     <div id="games-grid">
       <div class="game-card active">
@@ -18,7 +21,6 @@
         <p>Network battle mode</p>
         <button id="start-btn">Start Game</button>
         <div id="start-wallet-status">Wallet: not connected</div>
-        <input id="start-nickname-input" type="text" maxlength="16" placeholder="Nickname (3-16)" />
       </div>
       <div class="game-card soon">
         <h3>🎮 Coming Soon</h3>
