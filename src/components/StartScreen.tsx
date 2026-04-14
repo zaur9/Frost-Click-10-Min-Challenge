@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import {
   canSkipNicknameBeforeConnect,
+  clearPendingNicknameBeforeConnect,
   type PreferredNetworkKey,
   queueNicknameBeforeConnect,
   setPreferredNetworkBeforeConnect,
@@ -25,6 +26,9 @@ export function StartScreen({ started }: Props) {
   const onConnectClick = () => {
     if (isConnected) return;
     const requireNickname = !canSkipNicknameBeforeConnect();
+    if (!requireNickname) {
+      clearPendingNicknameBeforeConnect();
+    }
     setNeedsNickname(requireNickname);
     setNicknameError('');
     setShowNicknameModal(true);
