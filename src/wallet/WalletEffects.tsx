@@ -25,7 +25,6 @@ export function WalletEffects() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const autoNickKeyRef = useRef<string>('');
-  const autoSwitchKeyRef = useRef<string>('');
 
   useEffect(() => {
     setUserAccount(address ?? null);
@@ -59,13 +58,18 @@ export function WalletEffects() {
 
     if (chainId === preferredChainId) return;
 
-    const key = `${address}:${chainId}->${preferredChainId}`;
-    if (autoSwitchKeyRef.current === key) return;
-    autoSwitchKeyRef.current = key;
-
-    void switchChain(wagmiConfig, { chainId: preferredChainId }).catch(() => {
+    void (async () => {
+      for (let i = 0; i < 4; i++) {
+        try {
+          await switchChain(wagmiConfig, { chainId: preferredChainId });
+          return;
+        } catch {
+          // Wallet can be temporarily not ready right after connect.
+          await new Promise((resolve) => window.setTimeout(resolve, 350));
+        }
+      }
       // User may reject network switch in wallet.
-    });
+    })();
   }, [isConnected, address, chainId]);
 
   useEffect(() => {
