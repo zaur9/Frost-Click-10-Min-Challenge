@@ -2,8 +2,8 @@ import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import {
-  canSkipNicknameBeforeConnect,
   clearPendingNicknameBeforeConnect,
+  hasKnownNicknameForNetwork,
   type PreferredNetworkKey,
   queueNicknameBeforeConnect,
   setPreferredNetworkBeforeConnect,
@@ -25,7 +25,7 @@ export function StartScreen({ started }: Props) {
 
   const onConnectClick = () => {
     if (isConnected) return;
-    const requireNickname = !canSkipNicknameBeforeConnect();
+    const requireNickname = !hasKnownNicknameForNetwork(selectedNetwork);
     if (!requireNickname) {
       clearPendingNicknameBeforeConnect();
     }
@@ -35,7 +35,8 @@ export function StartScreen({ started }: Props) {
   };
 
   const onNicknameConfirm = () => {
-    if (needsNickname) {
+    const requireNickname = !hasKnownNicknameForNetwork(selectedNetwork);
+    if (requireNickname) {
       const error = validateNicknameInput(nickname);
       if (error) {
         setNicknameError(error);
@@ -45,6 +46,8 @@ export function StartScreen({ started }: Props) {
         setNicknameError('Nickname is invalid');
         return;
       }
+    } else {
+      clearPendingNicknameBeforeConnect();
     }
     setPreferredNetworkBeforeConnect(selectedNetwork);
     setNickname('');
@@ -118,14 +121,22 @@ export function StartScreen({ started }: Props) {
               <button
                 type="button"
                 className={selectedNetwork === 'somnia' ? 'active' : ''}
-                onClick={() => setSelectedNetwork('somnia')}
+                onClick={() => {
+                  setSelectedNetwork('somnia');
+                  setNeedsNickname(!hasKnownNicknameForNetwork('somnia'));
+                  setNicknameError('');
+                }}
               >
                 Somnia
               </button>
               <button
                 type="button"
                 className={selectedNetwork === 'ape' ? 'active' : ''}
-                onClick={() => setSelectedNetwork('ape')}
+                onClick={() => {
+                  setSelectedNetwork('ape');
+                  setNeedsNickname(!hasKnownNicknameForNetwork('ape'));
+                  setNicknameError('');
+                }}
               >
                 ApeChain
               </button>
