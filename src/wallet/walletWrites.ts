@@ -54,6 +54,10 @@ function clearPendingNickname() {
   localStorage.removeItem(NICKNAME_PENDING_KEY);
 }
 
+export function clearPendingNicknameBeforeConnect() {
+  clearPendingNickname();
+}
+
 function setNicknameKnown(value: boolean) {
   if (value) localStorage.setItem(NICKNAME_KNOWN_KEY, '1');
 }
@@ -175,6 +179,29 @@ export async function saveNicknameFlow(prefilledNickname?: string | null): Promi
 }
 
 export async function applyPendingNicknameAfterConnect(): Promise<void> {
+  const { address, chainId } = getAccount(wagmiConfig);
+  if (address && chainId) {
+    const net = getNetworkByChainId(chainId);
+    if (net) {
+      try {
+        const onchainNickname = (await readContract(wagmiConfig, {
+          address: net.contractAddress,
+          abi: frostAbi,
+          functionName: 'nicknameOf',
+          args: [address],
+          chainId: net.chainId,
+        })) as string;
+        if (normalizeNickname(onchainNickname)) {
+          setNicknameKnown(true);
+          clearPendingNickname();
+          return;
+        }
+      } catch {
+        // ignore and continue with pending fallback
+      }
+    }
+  }
+
   const pending = getPendingNickname();
   if (!pending) return;
   await saveNicknameFlow(pending);
