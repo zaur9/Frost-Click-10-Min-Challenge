@@ -61,10 +61,12 @@ body {
 }
 
 #start-header-actions button {
-  width: 170px;
+  width: auto;
+  min-width: 170px;
   padding: 10px 12px;
   font-size: 13px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 /* RainbowKit ConnectButton in start header */
@@ -80,14 +82,6 @@ body {
 .start-header-actions-rk > div:has([data-rk]) {
   display: flex;
   align-items: center;
-}
-
-#start-wallet-status {
-  min-height: 16px;
-  font-size: 12px;
-  color: #d6e6ff;
-  text-align: center;
-  margin-top: -6px;
 }
 
 #games-grid {
