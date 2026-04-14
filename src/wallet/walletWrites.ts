@@ -329,6 +329,10 @@ export async function handleSubmitScoreRequest(
         const reason = lastSwitchError ? `\n${getReadableError(lastSwitchError)}` : '';
         throw new Error(`Could not switch network. Please switch to ${readableChains()}${reason}`);
       }
+
+      // Give wallet UI a brief moment to settle after network confirmation
+      // so signature prompt is shown strictly after switch.
+      await sleep(300);
     }
 
     if (requestedChainId !== null && getChainId(wagmiConfig) !== targetChainId) {
