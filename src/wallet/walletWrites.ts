@@ -9,6 +9,7 @@ import { consumeScoreAfterSubmit, getScore, setUserAccount } from '../game/frost
 import { refreshBattleTotalsDOM } from './leaderboard';
 
 const NICKNAME_KNOWN_KEY = 'frost.nickname.known';
+const NICKNAME_KNOWN_BY_NETWORK_PREFIX = 'frost.nickname.known.network.';
 const NICKNAME_PENDING_KEY = 'frost.nickname.pending';
 const PREFERRED_NETWORK_KEY = 'frost.preferred.network';
 
@@ -86,6 +87,14 @@ export function queueNicknameBeforeConnect(value: string): boolean {
 }
 
 export type PreferredNetworkKey = 'somnia' | 'ape';
+
+function setNicknameKnownForNetwork(network: PreferredNetworkKey, value: boolean) {
+  if (value) localStorage.setItem(`${NICKNAME_KNOWN_BY_NETWORK_PREFIX}${network}`, '1');
+}
+
+export function hasKnownNicknameForNetwork(network: PreferredNetworkKey): boolean {
+  return localStorage.getItem(`${NICKNAME_KNOWN_BY_NETWORK_PREFIX}${network}`) === '1';
+}
 
 export function setPreferredNetworkBeforeConnect(network: PreferredNetworkKey) {
   localStorage.setItem(PREFERRED_NETWORK_KEY, network);
@@ -204,6 +213,7 @@ export async function saveNicknameFlow(prefilledNickname?: string | null): Promi
     await waitForTransactionReceipt(pub, { hash }).catch(() => {});
 
     setNicknameKnown(true);
+    setNicknameKnownForNetwork(net.key, true);
     clearPendingNickname();
     alert('Nickname saved!');
     await refreshBattleTotalsDOM();
@@ -230,6 +240,7 @@ export async function applyPendingNicknameAfterConnect(): Promise<void> {
         })) as string;
         if (normalizeNickname(onchainNickname)) {
           setNicknameKnown(true);
+          setNicknameKnownForNetwork(net.key, true);
           clearPendingNickname();
           return;
         }
@@ -260,6 +271,7 @@ export async function syncNicknameKnownFromChain(): Promise<void> {
     })) as string;
     if (normalizeNickname(nickname)) {
       setNicknameKnown(true);
+      setNicknameKnownForNetwork(net.key, true);
     }
   } catch {
     // ignore: RPC/contract can fail on unsupported networks
