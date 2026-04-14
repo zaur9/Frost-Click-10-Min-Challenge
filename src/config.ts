@@ -1,0 +1,20 @@
+const env = import.meta.env;
+
+function numberFromEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const CONFIG = {
+  CONTRACT_ADDRESS: env.VITE_SOMNIA_CONTRACT_ADDRESS ?? '0x1B6fCe675a504078a2324E6e84e521C2588dcf6B',
+  APECHAIN_CONTRACT_ADDRESS:
+    env.VITE_APECHAIN_CONTRACT_ADDRESS ?? '0xd65b585aaE9cCd4547fF7C209949A271E969E8a5',
+
+  GAME_DURATION: numberFromEnv(env.VITE_GAME_DURATION_MS, 10 * 60 * 1000),
+
+  SOMNIA_CHAIN_ID: numberFromEnv(env.VITE_SOMNIA_CHAIN_ID, 5031),
+  APECHAIN_CHAIN_ID: numberFromEnv(env.VITE_APECHAIN_CHAIN_ID, 33139),
+
+  SOMNIA_RPC_URL: env.VITE_SOMNIA_RPC_URL ?? 'https://api.infra.mainnet.somnia.network/',
+  APECHAIN_RPC_URL: env.VITE_APECHAIN_RPC_URL ?? 'https://rpc.apechain.com/http',
+} as const;
