@@ -74,7 +74,6 @@ export function StartScreen({ started }: Props) {
           <button type="button" id="start-btn">
             Start Game
           </button>
-          <div id="start-wallet-status">Wallet: not connected</div>
         </div>
         <div className="game-card soon">
           <h3>🎮 Coming Soon</h3>
