@@ -25,6 +25,7 @@ export function WalletEffects() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const autoNickKeyRef = useRef<string>('');
+  const autoSwitchPreferredDoneRef = useRef<string>('');
 
   useEffect(() => {
     setUserAccount(address ?? null);
@@ -55,19 +56,30 @@ export function WalletEffects() {
     const preferred = getPreferredNetworkBeforeConnect();
     const preferredChainId =
       preferred === 'ape' ? CONFIG.APECHAIN_CHAIN_ID : CONFIG.SOMNIA_CHAIN_ID;
+    const preferredKey = `${address}:${preferredChainId}`;
 
-    if (chainId === preferredChainId) return;
+    // Only enforce preferred network once right after connect.
+    // Prevents fighting with manual network changes (e.g. submit to another chain).
+    if (autoSwitchPreferredDoneRef.current === preferredKey) return;
+
+    if (chainId === preferredChainId) {
+      autoSwitchPreferredDoneRef.current = preferredKey;
+      return;
+    }
 
     void (async () => {
       for (let i = 0; i < 4; i++) {
         try {
           await switchChain(wagmiConfig, { chainId: preferredChainId });
+          autoSwitchPreferredDoneRef.current = preferredKey;
           return;
         } catch {
           // Wallet can be temporarily not ready right after connect.
           await new Promise((resolve) => window.setTimeout(resolve, 350));
         }
       }
+      // Stop retrying forever in this session if user rejects.
+      autoSwitchPreferredDoneRef.current = preferredKey;
       // User may reject network switch in wallet.
     })();
   }, [isConnected, address, chainId]);
