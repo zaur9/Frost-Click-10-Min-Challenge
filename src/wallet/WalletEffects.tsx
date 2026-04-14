@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAccount, useChainId } from 'wagmi';
+import { readContract } from 'wagmi/actions';
 import { setUserAccount, updatePersonalBest } from '../game/frostGame';
 import { refreshBattleTotalsDOM } from './leaderboard';
 import {
@@ -8,6 +9,8 @@ import {
   syncNicknameKnownFromChain,
 } from './walletWrites';
 import { CONFIG } from '../config';
+import { frostAbi } from '../lib/frostAbi';
+import { wagmiConfig } from '../lib/wagmiConfig';
 
 function networkLabel(chainId: number | undefined) {
   if (chainId === CONFIG.SOMNIA_CHAIN_ID) return 'Somnia';
@@ -57,13 +60,53 @@ export function WalletEffects() {
   }, [isConnected, address, chainId]);
 
   useEffect(() => {
-    const el = document.getElementById('start-wallet-status');
-    if (!el) return;
-    if (!isConnected || !address) {
-      el.textContent = 'Wallet: not connected';
-      return;
+    const btn = document.getElementById('start-connect-wallet') as HTMLButtonElement | null;
+    if (!btn) return;
+    let cancelled = false;
+
+    if (!isConnected || !address || !chainId) {
+      btn.textContent = 'Connect Wallet';
+      return () => {
+        cancelled = true;
+      };
     }
-    el.textContent = `Wallet: ${address.slice(0, 6)}...${address.slice(-4)} (${networkLabel(chainId)})`;
+
+    btn.textContent = `Connected (${networkLabel(chainId)})`;
+
+    const contractAddress =
+      chainId === CONFIG.SOMNIA_CHAIN_ID
+        ? CONFIG.CONTRACT_ADDRESS
+        : chainId === CONFIG.APECHAIN_CHAIN_ID
+          ? CONFIG.APECHAIN_CONTRACT_ADDRESS
+          : null;
+
+    if (!contractAddress) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      try {
+        const nickname = (await readContract(wagmiConfig, {
+          address: contractAddress as `0x${string}`,
+          abi: frostAbi,
+          functionName: 'nicknameOf',
+          args: [address as `0x${string}`],
+          chainId: chainId as typeof CONFIG.SOMNIA_CHAIN_ID | typeof CONFIG.APECHAIN_CHAIN_ID,
+        })) as string;
+        const normalized = String(nickname || '').trim();
+        if (!cancelled && normalized) {
+          btn.textContent = `${normalized} (${networkLabel(chainId)})`;
+        }
+      } catch {
+        // keep "Connected (Network)" fallback
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isConnected, address, chainId]);
 
   return null;
