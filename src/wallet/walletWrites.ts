@@ -100,6 +100,23 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitForChainSync(targetChainId: number, attempts = 12, delayMs = 250) {
+  for (let i = 0; i < attempts; i++) {
+    if (getChainId(wagmiConfig) === targetChainId) return true;
+    await sleep(delayMs);
+  }
+  return getChainId(wagmiConfig) === targetChainId;
+}
+
+async function getWalletClientOnChain(targetChainId: number, attempts = 12, delayMs = 250) {
+  for (let i = 0; i < attempts; i++) {
+    const wc = await getWalletClient(wagmiConfig, { chainId: targetChainId });
+    if (wc && wc.chain?.id === targetChainId) return wc;
+    await sleep(delayMs);
+  }
+  return null;
+}
+
 function displayNameFor(addr: string, nickname: string) {
   const n = normalizeNickname(nickname);
   if (n) return n;
@@ -256,10 +273,10 @@ export async function handleSubmitScoreRequest(
 
     if (requestedChainId !== null) {
       await switchChain(wagmiConfig, { chainId: targetChainId });
-      // Wallets sometimes apply switch asynchronously; wait for chain state sync.
-      for (let i = 0; i < 8; i++) {
-        if (getChainId(wagmiConfig) === targetChainId) break;
-        await sleep(200);
+      const synced = await waitForChainSync(targetChainId);
+      if (!synced) {
+        alert(`Could not switch network. Please switch to ${readableChains()}`);
+        return;
       }
     }
 
@@ -271,13 +288,9 @@ export async function handleSubmitScoreRequest(
 
     setUserAccount(address);
 
-    let walletClient = await getWalletClient(wagmiConfig, { chainId: net.chainId });
+    const walletClient = await getWalletClientOnChain(net.chainId);
     if (!walletClient) {
-      await sleep(250);
-      walletClient = await getWalletClient(wagmiConfig, { chainId: net.chainId });
-    }
-    if (!walletClient) {
-      alert('Connect wallet first');
+      alert(`Wallet is not ready on ${net.name}. Try again in a moment.`);
       return;
     }
 
