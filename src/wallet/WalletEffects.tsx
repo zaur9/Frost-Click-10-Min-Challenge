@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useAccount, useChainId } from 'wagmi';
+import { switchChain } from 'wagmi/actions';
 import { readContract } from 'wagmi/actions';
 import { setUserAccount, updatePersonalBest } from '../game/frostGame';
 import { refreshBattleTotalsDOM } from './leaderboard';
 import {
   applyPendingNicknameAfterConnect,
+  getPreferredNetworkBeforeConnect,
   handleSubmitScoreRequest,
   syncNicknameKnownFromChain,
 } from './walletWrites';
@@ -23,6 +25,7 @@ export function WalletEffects() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const autoNickKeyRef = useRef<string>('');
+  const autoSwitchKeyRef = useRef<string>('');
 
   useEffect(() => {
     setUserAccount(address ?? null);
@@ -46,6 +49,24 @@ export function WalletEffects() {
     window.addEventListener('submit-score-request', onSubmit);
     return () => window.removeEventListener('submit-score-request', onSubmit);
   }, []);
+
+  useEffect(() => {
+    if (!isConnected || !address || !chainId) return;
+
+    const preferred = getPreferredNetworkBeforeConnect();
+    const preferredChainId =
+      preferred === 'ape' ? CONFIG.APECHAIN_CHAIN_ID : CONFIG.SOMNIA_CHAIN_ID;
+
+    if (chainId === preferredChainId) return;
+
+    const key = `${address}:${chainId}->${preferredChainId}`;
+    if (autoSwitchKeyRef.current === key) return;
+    autoSwitchKeyRef.current = key;
+
+    void switchChain(wagmiConfig, { chainId: preferredChainId }).catch(() => {
+      // User may reject network switch in wallet.
+    });
+  }, [isConnected, address, chainId]);
 
   useEffect(() => {
     if (!isConnected || !address || !chainId) return;
