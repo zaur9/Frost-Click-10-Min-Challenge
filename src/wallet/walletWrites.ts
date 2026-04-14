@@ -203,10 +203,6 @@ export async function saveNicknameFlow(prefilledNickname?: string | null): Promi
     const pub = createPublicClient({ chain: net.chain, transport: http() });
     await waitForTransactionReceipt(pub, { hash }).catch(() => {});
 
-    const status = document.getElementById('start-wallet-status');
-    if (status) {
-      status.textContent = `Wallet: ${displayNameFor(address, nickname)} (${net.name})`;
-    }
     setNicknameKnown(true);
     clearPendingNickname();
     alert('Nickname saved!');
