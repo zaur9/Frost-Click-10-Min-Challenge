@@ -5,7 +5,7 @@ import { CONFIG } from '../config';
 import { apeChain, somnia } from '../lib/chains';
 import { frostAbi } from '../lib/frostAbi';
 import { wagmiConfig } from '../lib/wagmiConfig';
-import { getScore, setUserAccount } from '../game/frostGame';
+import { consumeScoreAfterSubmit, getScore, setUserAccount } from '../game/frostGame';
 import { refreshBattleTotalsDOM } from './leaderboard';
 
 const NICKNAME_KNOWN_KEY = 'frost.nickname.known';
@@ -367,6 +367,7 @@ export async function handleSubmitScoreRequest(
 
   try {
     await runSubmitOnce();
+    consumeScoreAfterSubmit();
     alert('Score submitted!');
     await refreshBattleTotalsDOM();
   } catch (err) {
@@ -377,6 +378,7 @@ export async function handleSubmitScoreRequest(
         await waitForChainSync(requestedChainId, 40, 250);
         await sleep(400);
         await runSubmitOnce();
+        consumeScoreAfterSubmit();
         alert('Score submitted!');
         await refreshBattleTotalsDOM();
         return;
