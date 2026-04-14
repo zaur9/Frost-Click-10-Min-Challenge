@@ -75,6 +75,10 @@ export function setUserAccount(addr: string | null) {
 
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
+export function consumeScoreAfterSubmit() {
+  score = 0;
+  updateScore();
+}
 
 function updateScore() {
   if (scoreEl) scoreEl.textContent = `Score: ${score}`;
