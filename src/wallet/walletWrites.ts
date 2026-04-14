@@ -136,6 +136,11 @@ function getReadableError(err: unknown): string {
   return 'Unknown error';
 }
 
+function isConnectorChainMismatchError(err: unknown): boolean {
+  const msg = getReadableError(err).toLowerCase();
+  return msg.includes('does not match the connection') || msg.includes('connector') && msg.includes('chain');
+}
+
 function displayNameFor(addr: string, nickname: string) {
   const n = normalizeNickname(nickname);
   if (n) return n;
@@ -287,19 +292,18 @@ export async function handleSubmitScoreRequest(
         ? CONFIG.SOMNIA_CHAIN_ID
         : null;
 
-  try {
+  const runSubmitOnce = async () => {
     const targetChainId = requestedChainId ?? getChainId(wagmiConfig);
     const targetNet = getNetworkByChainId(targetChainId);
     if (!targetNet) {
-      alert(`Wrong chain, switch to ${readableChains()}`);
-      return;
+      throw new Error(`Wrong chain, switch to ${readableChains()}`);
     }
 
     if (requestedChainId !== null) {
       let switched = false;
       let lastSwitchError: unknown = null;
 
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 3; i++) {
         try {
           await switchChain(wagmiConfig, { chainId: targetChainId });
           const synced = await waitForChainSync(targetChainId, 40, 250);
@@ -309,42 +313,32 @@ export async function handleSubmitScoreRequest(
           }
         } catch (e) {
           lastSwitchError = e;
-          await sleep(250);
+          await sleep(350);
         }
       }
 
       if (!switched) {
         const reason = lastSwitchError ? `\n${getReadableError(lastSwitchError)}` : '';
-        alert(`Could not switch network. Please switch to ${readableChains()}${reason}`);
-        return;
+        throw new Error(`Could not switch network. Please switch to ${readableChains()}${reason}`);
       }
     }
 
     if (requestedChainId !== null && getChainId(wagmiConfig) !== targetChainId) {
-      alert(`Wrong chain active. Expected ${targetChainId}`);
-      return;
+      throw new Error(`Wrong chain active. Expected ${targetChainId}`);
     }
 
     setUserAccount(address);
 
-    const walletClient = await getWalletClientOnChain(targetNet.chainId, 30, 250);
+    const walletClient = await getWalletClientOnChain(targetNet.chainId, 36, 250);
     if (!walletClient) {
-      alert(`Wallet is not ready on ${targetNet.name}. Try again in a moment.`);
-      return;
+      throw new Error(`Wallet is not ready on ${targetNet.name}. Try again in a moment.`);
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
-
     const messageHash = keccak256(
       encodePacked(
         ['address', 'uint32', 'uint32', 'address', 'uint256'],
-        [
-          address,
-          currentScore,
-          timestamp,
-          targetNet.contractAddress,
-          BigInt(targetNet.chainId),
-        ]
+        [address, currentScore, timestamp, targetNet.contractAddress, BigInt(targetNet.chainId)]
       )
     );
 
@@ -369,10 +363,30 @@ export async function handleSubmitScoreRequest(
     });
     const pub = createPublicClient({ chain: targetNet.chain, transport: http() });
     await waitForTransactionReceipt(pub, { hash }).catch(() => {});
+  };
 
+  try {
+    await runSubmitOnce();
     alert('Score submitted!');
     await refreshBattleTotalsDOM();
   } catch (err) {
+    // Auto-heal one time on connector/network desync without user re-click.
+    if (isConnectorChainMismatchError(err) && requestedChainId !== null) {
+      try {
+        await switchChain(wagmiConfig, { chainId: requestedChainId });
+        await waitForChainSync(requestedChainId, 40, 250);
+        await sleep(400);
+        await runSubmitOnce();
+        alert('Score submitted!');
+        await refreshBattleTotalsDOM();
+        return;
+      } catch (retryErr) {
+        console.error(retryErr);
+        alert(`Submit failed: ${getReadableError(retryErr)}`);
+        return;
+      }
+    }
+
     console.error(err);
     alert(`Submit failed: ${getReadableError(err)}`);
   }
