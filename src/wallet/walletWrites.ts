@@ -117,6 +117,25 @@ async function getWalletClientOnChain(targetChainId: number, attempts = 12, dela
   return null;
 }
 
+function getReadableError(err: unknown): string {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const rec = err as Record<string, unknown>;
+    const shortMessage = rec.shortMessage;
+    if (typeof shortMessage === 'string' && shortMessage.trim()) return shortMessage;
+    const message = rec.message;
+    if (typeof message === 'string' && message.trim()) return message;
+    const cause = rec.cause;
+    if (cause && typeof cause === 'object') {
+      const causeRec = cause as Record<string, unknown>;
+      if (typeof causeRec.message === 'string' && causeRec.message.trim()) {
+        return causeRec.message;
+      }
+    }
+  }
+  return 'Unknown error';
+}
+
 function displayNameFor(addr: string, nickname: string) {
   const n = normalizeNickname(nickname);
   if (n) return n;
@@ -270,27 +289,47 @@ export async function handleSubmitScoreRequest(
 
   try {
     const targetChainId = requestedChainId ?? getChainId(wagmiConfig);
+    const targetNet = getNetworkByChainId(targetChainId);
+    if (!targetNet) {
+      alert(`Wrong chain, switch to ${readableChains()}`);
+      return;
+    }
 
     if (requestedChainId !== null) {
-      await switchChain(wagmiConfig, { chainId: targetChainId });
-      const synced = await waitForChainSync(targetChainId);
-      if (!synced) {
-        alert(`Could not switch network. Please switch to ${readableChains()}`);
+      let switched = false;
+      let lastSwitchError: unknown = null;
+
+      for (let i = 0; i < 2; i++) {
+        try {
+          await switchChain(wagmiConfig, { chainId: targetChainId });
+          const synced = await waitForChainSync(targetChainId, 40, 250);
+          if (synced) {
+            switched = true;
+            break;
+          }
+        } catch (e) {
+          lastSwitchError = e;
+          await sleep(250);
+        }
+      }
+
+      if (!switched) {
+        const reason = lastSwitchError ? `\n${getReadableError(lastSwitchError)}` : '';
+        alert(`Could not switch network. Please switch to ${readableChains()}${reason}`);
         return;
       }
     }
 
-    const net = getNetworkByChainId(targetChainId);
-    if (!net) {
-      alert(`Wrong chain, switch to ${readableChains()}`);
+    if (requestedChainId !== null && getChainId(wagmiConfig) !== targetChainId) {
+      alert(`Wrong chain active. Expected ${targetChainId}`);
       return;
     }
 
     setUserAccount(address);
 
-    const walletClient = await getWalletClientOnChain(net.chainId);
+    const walletClient = await getWalletClientOnChain(targetNet.chainId, 30, 250);
     if (!walletClient) {
-      alert(`Wallet is not ready on ${net.name}. Try again in a moment.`);
+      alert(`Wallet is not ready on ${targetNet.name}. Try again in a moment.`);
       return;
     }
 
@@ -303,8 +342,8 @@ export async function handleSubmitScoreRequest(
           address,
           currentScore,
           timestamp,
-          net.contractAddress,
-          BigInt(net.chainId),
+          targetNet.contractAddress,
+          BigInt(targetNet.chainId),
         ]
       )
     );
@@ -321,20 +360,20 @@ export async function handleSubmitScoreRequest(
     if (v < 27) v += 27;
 
     const hash = await walletClient.writeContract({
-      address: net.contractAddress,
+      address: targetNet.contractAddress,
       abi: frostAbi,
       functionName: 'submitScoreSigned',
       args: [currentScore, timestamp, v, r, s],
-      chain: net.chain,
+      chain: targetNet.chain,
       account: address,
     });
-    const pub = createPublicClient({ chain: net.chain, transport: http() });
+    const pub = createPublicClient({ chain: targetNet.chain, transport: http() });
     await waitForTransactionReceipt(pub, { hash }).catch(() => {});
 
     alert('Score submitted!');
     await refreshBattleTotalsDOM();
   } catch (err) {
     console.error(err);
-    alert('Error');
+    alert(`Submit failed: ${getReadableError(err)}`);
   }
 }
