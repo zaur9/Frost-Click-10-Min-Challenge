@@ -1,6 +1,9 @@
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
+import { switchChain } from 'wagmi/actions';
+import { CONFIG } from '../config';
+import { wagmiConfig } from '../lib/wagmiConfig';
 import {
   canSkipNicknameBeforeConnect,
   clearPendingNicknameBeforeConnect,
@@ -18,6 +21,7 @@ type Props = {
 export function StartScreen({ started }: Props) {
   const { openConnectModal } = useConnectModal();
   const { isConnected } = useAccount();
+  const chainId = useChainId();
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nickname, setNickname] = useState('');
   const [nicknameError, setNicknameError] = useState('');
@@ -25,11 +29,13 @@ export function StartScreen({ started }: Props) {
   const [needsNickname, setNeedsNickname] = useState(false);
 
   const onConnectClick = () => {
-    if (isConnected) return;
+    const effectiveNetwork: PreferredNetworkKey =
+      isConnected && chainId === CONFIG.APECHAIN_CHAIN_ID ? 'ape' : selectedNetwork;
+    if (isConnected) setSelectedNetwork(effectiveNetwork);
     // Migration fallback: users who set nickname before per-network flags existed.
-    const knownForSelected = hasKnownNicknameForNetwork(selectedNetwork);
+    const knownForSelected = hasKnownNicknameForNetwork(effectiveNetwork);
     const knownLegacy = canSkipNicknameBeforeConnect();
-    const requireNickname = !knownForSelected && !knownLegacy;
+    const requireNickname = !isConnected && !knownForSelected && !knownLegacy;
     if (!requireNickname) {
       clearPendingNicknameBeforeConnect();
     }
@@ -38,7 +44,7 @@ export function StartScreen({ started }: Props) {
     setShowNicknameModal(true);
   };
 
-  const onNicknameConfirm = () => {
+  const onNicknameConfirm = async () => {
     const knownForSelected = hasKnownNicknameForNetwork(selectedNetwork);
     const knownLegacy = canSkipNicknameBeforeConnect();
     const requireNickname = !knownForSelected && !knownLegacy;
@@ -59,7 +65,19 @@ export function StartScreen({ started }: Props) {
     setNickname('');
     setNicknameError('');
     setShowNicknameModal(false);
-    openConnectModal?.();
+    if (!isConnected) {
+      openConnectModal?.();
+      return;
+    }
+    const targetChainId =
+      selectedNetwork === 'ape' ? CONFIG.APECHAIN_CHAIN_ID : CONFIG.SOMNIA_CHAIN_ID;
+    if (chainId !== targetChainId) {
+      try {
+        await switchChain(wagmiConfig, { chainId: targetChainId });
+      } catch {
+        // user may reject switch in wallet
+      }
+    }
   };
 
   const onNicknameCancel = () => {
