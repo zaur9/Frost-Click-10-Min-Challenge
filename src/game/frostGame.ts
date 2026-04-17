@@ -14,7 +14,15 @@ let gameActive = false;
 let isFrozen = false;
 let isPaused = false;
 
-let objects: { el: HTMLDivElement; type: string; y: number; speed: number }[] = [];
+let objects: {
+  el: HTMLDivElement;
+  type: string;
+  y: number;
+  speed: number;
+  x: number;
+  width: number;
+  height: number;
+}[] = [];
 let gameLoopId: number | null = null;
 let startTime = 0;
 let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -140,12 +148,14 @@ function createObject(emoji: string, type: string, speed: number) {
   const bounds = getPlayfieldBounds();
   const spawnMinX = bounds.left + 24;
   const spawnMaxX = bounds.right - 24;
-  obj.style.left = spawnMinX + Math.random() * Math.max(1, spawnMaxX - spawnMinX) + 'px';
+  const spawnX = spawnMinX + Math.random() * Math.max(1, spawnMaxX - spawnMinX);
+  obj.style.left = `${spawnX}px`;
   obj.style.transform = `translateX(-50%) translateY(0px)`;
 
   gameRoot.appendChild(obj);
-
-  objects.push({ el: obj, type, y: 0, speed });
+  const width = Math.max(1, obj.offsetWidth || 50);
+  const height = Math.max(1, obj.offsetHeight || 50);
+  objects.push({ el: obj, type, y: 0, speed, x: spawnX, width, height });
 }
 
 function endGame(isWin: boolean) {
@@ -250,6 +260,7 @@ function gameLoop(timestamp: number) {
     }
   }
 
+  const viewportHeight = window.innerHeight;
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
 
@@ -257,7 +268,7 @@ function gameLoop(timestamp: number) {
       obj.y += obj.speed * dt;
       obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
-      if (obj.y > window.innerHeight) {
+      if (obj.y > viewportHeight) {
         obj.el.remove();
         objects.splice(i, 1);
       }
@@ -457,7 +468,11 @@ function onGameClick(e: MouseEvent) {
 
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
-    const rect = obj.el.getBoundingClientRect();
+    const halfWidth = obj.width / 2;
+    const top = PLAYFIELD_TOP_OFFSET + obj.y;
+    const bottom = top + obj.height;
+    const left = obj.x - halfWidth;
+    const right = obj.x + halfWidth;
 
     const isBomb = obj.type === 'bomb';
     const isSnow = obj.type === 'snow';
@@ -466,10 +481,10 @@ function onGameClick(e: MouseEvent) {
     const paddingTop = isSnow ? HIT_PADDING_SNOW_TOP : 0;
     const paddingSide = isSnow ? HIT_PADDING_SNOW_SIDE : 0;
     const hit =
-      x >= rect.left - paddingSide &&
-      x <= rect.right + paddingSide &&
-      y >= rect.top - paddingTop &&
-      y <= rect.bottom + paddingBottom;
+      x >= left - paddingSide &&
+      x <= right + paddingSide &&
+      y >= top - paddingTop &&
+      y <= bottom + paddingBottom;
 
     if (!hit) continue;
 
@@ -480,8 +495,8 @@ function onGameClick(e: MouseEvent) {
 
     const flash = document.createElement('div');
     flash.className = 'neon-flash';
-    flash.style.left = rect.left + rect.width / 2 - 20 + 'px';
-    flash.style.top = rect.top + rect.height / 2 - 20 + 'px';
+    flash.style.left = obj.x - 20 + 'px';
+    flash.style.top = top + obj.height / 2 - 20 + 'px';
     gameRoot.appendChild(flash);
     setTimeout(() => flash.remove(), 250);
 
