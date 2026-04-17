@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { switchChain } from 'wagmi/actions';
 import { readContract } from 'wagmi/actions';
-import { setUserAccount, updatePersonalBest } from '../game/frostGame';
+import { isGameActive, setUserAccount, updatePersonalBest } from '../game/frostGame';
 import { refreshBattleTotalsDOM } from './leaderboard';
 import {
   applyPendingNicknameAfterConnect,
@@ -37,7 +37,9 @@ export function WalletEffects() {
 
   useEffect(() => {
     void refreshBattleTotalsDOM();
-    const id = window.setInterval(() => void refreshBattleTotalsDOM(), 30000);
+    const id = window.setInterval(() => {
+      if (!isGameActive()) void refreshBattleTotalsDOM();
+    }, 30000);
     return () => clearInterval(id);
   }, []);
 
