@@ -5,7 +5,6 @@ import { switchChain } from 'wagmi/actions';
 import { CONFIG } from '../config';
 import { wagmiConfig } from '../lib/wagmiConfig';
 import {
-  canSkipNicknameBeforeConnect,
   clearPendingNicknameBeforeConnect,
   hasKnownNicknameForNetwork,
   type PreferredNetworkKey,
@@ -32,10 +31,8 @@ export function StartScreen({ started }: Props) {
     const effectiveNetwork: PreferredNetworkKey =
       isConnected && chainId === CONFIG.APECHAIN_CHAIN_ID ? 'ape' : selectedNetwork;
     if (isConnected) setSelectedNetwork(effectiveNetwork);
-    // Migration fallback: users who set nickname before per-network flags existed.
     const knownForSelected = hasKnownNicknameForNetwork(effectiveNetwork);
-    const knownLegacy = canSkipNicknameBeforeConnect();
-    const requireNickname = !isConnected && !knownForSelected && !knownLegacy;
+    const requireNickname = !isConnected && !knownForSelected;
     if (!requireNickname) {
       clearPendingNicknameBeforeConnect();
     }
@@ -46,8 +43,7 @@ export function StartScreen({ started }: Props) {
 
   const onNicknameConfirm = async () => {
     const knownForSelected = hasKnownNicknameForNetwork(selectedNetwork);
-    const knownLegacy = canSkipNicknameBeforeConnect();
-    const requireNickname = !knownForSelected && !knownLegacy;
+    const requireNickname = !knownForSelected;
     if (requireNickname) {
       const error = validateNicknameInput(nickname);
       if (error) {
@@ -147,9 +143,7 @@ export function StartScreen({ started }: Props) {
                 className={selectedNetwork === 'somnia' ? 'active' : ''}
                 onClick={() => {
                   setSelectedNetwork('somnia');
-                  setNeedsNickname(
-                    !hasKnownNicknameForNetwork('somnia') && !canSkipNicknameBeforeConnect()
-                  );
+                  setNeedsNickname(!hasKnownNicknameForNetwork('somnia'));
                   setNicknameError('');
                 }}
               >
@@ -160,9 +154,7 @@ export function StartScreen({ started }: Props) {
                 className={selectedNetwork === 'ape' ? 'active' : ''}
                 onClick={() => {
                   setSelectedNetwork('ape');
-                  setNeedsNickname(
-                    !hasKnownNicknameForNetwork('ape') && !canSkipNicknameBeforeConnect()
-                  );
+                  setNeedsNickname(!hasKnownNicknameForNetwork('ape'));
                   setNicknameError('');
                 }}
               >
