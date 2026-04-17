@@ -94,12 +94,21 @@ export function queueNicknameBeforeConnect(value: string): boolean {
 
 export type PreferredNetworkKey = 'somnia' | 'ape';
 
+function getContractAddressForNetwork(network: PreferredNetworkKey): Address {
+  return (network === 'ape' ? CONFIG.APECHAIN_CONTRACT_ADDRESS : CONFIG.CONTRACT_ADDRESS) as Address;
+}
+
+function getNicknameKnownStorageKey(network: PreferredNetworkKey): string {
+  const contractAddress = getContractAddressForNetwork(network).toLowerCase();
+  return `${NICKNAME_KNOWN_BY_NETWORK_PREFIX}${network}.${contractAddress}`;
+}
+
 function setNicknameKnownForNetwork(network: PreferredNetworkKey, value: boolean) {
-  if (value) localStorage.setItem(`${NICKNAME_KNOWN_BY_NETWORK_PREFIX}${network}`, '1');
+  if (value) localStorage.setItem(getNicknameKnownStorageKey(network), '1');
 }
 
 export function hasKnownNicknameForNetwork(network: PreferredNetworkKey): boolean {
-  return localStorage.getItem(`${NICKNAME_KNOWN_BY_NETWORK_PREFIX}${network}`) === '1';
+  return localStorage.getItem(getNicknameKnownStorageKey(network)) === '1';
 }
 
 export function setPreferredNetworkBeforeConnect(network: PreferredNetworkKey) {
