@@ -47,6 +47,8 @@ const SPAWN_CHANCE_GIFT = 0.18;
 const PLAYFIELD_TOP_OFFSET = 78;
 
 let userAccount: string | null = null;
+let roundTraceSeed = '';
+let lastRoundDurationSec = 0;
 
 let gameRoot: HTMLElement | null = null;
 let scoreEl: HTMLElement | null = null;
@@ -75,9 +77,20 @@ export function setUserAccount(addr: string | null) {
 
 export const getScore = () => score;
 export const isGameActive = () => gameActive;
+export const getRoundDurationSeconds = () => Math.max(0, lastRoundDurationSec);
+export const getRoundTraceSeed = () => roundTraceSeed;
 export function consumeScoreAfterSubmit() {
   score = 0;
   updateScore();
+}
+
+function pushRoundTrace(tag: string, value: number) {
+  if (!roundTraceSeed) return;
+  const elapsedMs = Math.max(0, Date.now() - startTime - pausedAccum);
+  roundTraceSeed += `|${tag}:${elapsedMs}:${value}:${objects.length}`;
+  if (roundTraceSeed.length > 3500) {
+    roundTraceSeed = roundTraceSeed.slice(roundTraceSeed.length - 3500);
+  }
 }
 
 function updateScore() {
@@ -141,6 +154,8 @@ function endGame(isWin: boolean) {
   gameLoopId = null;
 
   const elapsed = Date.now() - startTime - pausedAccum;
+  lastRoundDurationSec = Math.max(0, Math.floor(elapsed / 1000));
+  pushRoundTrace(isWin ? 'finish_win' : 'finish_lose', score);
 
   if (resultTitle) resultTitle.textContent = isWin ? '🎉 You Survived 10 Minutes! 🎉' : 'Game Over!';
   if (finalScoreEl) finalScoreEl.textContent = `Final Score: ${score}`;
@@ -257,26 +272,31 @@ function spawnTick() {
   if (now - lastIceSpawn >= ICE_INTERVAL) {
     createObject('🧊', 'ice', 80);
     lastIceSpawn = now;
+    pushRoundTrace('spawn_ice', 1);
   }
 
   if (now - lastSomniaDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
     lastSomniaDropFast = now;
+    pushRoundTrace('spawn_somnia_fast', 1);
   }
 
   if (now - lastSomniaDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
     lastSomniaDropSlow = now;
+    pushRoundTrace('spawn_somnia_slow', 1);
   }
 
   if (now - lastApeDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
     createObject('', 'ape-logo', 70 + Math.random() * 30);
     lastApeDropFast = now;
+    pushRoundTrace('spawn_ape_fast', 1);
   }
 
   if (now - lastApeDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
     createObject('', 'ape-logo', 70 + Math.random() * 30);
     lastApeDropSlow = now;
+    pushRoundTrace('spawn_ape_slow', 1);
   }
 
   if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70);
@@ -362,6 +382,9 @@ function startGame() {
   gameLoopId = null;
 
   startTime = Date.now();
+  lastRoundDurationSec = 0;
+  roundTraceSeed = `v2:${startTime}:${Math.floor(Math.random() * 1_000_000)}`;
+  pushRoundTrace('start', 0);
 
   lastIceSpawn = startTime;
 
@@ -460,10 +483,12 @@ function onGameClick(e: MouseEvent) {
       else if (type === 'toy-green' || type === 'toy-purple') score += 2;
       else if (type === 'somnia' || type === 'ape-logo') score += 10;
       updateScore();
+      pushRoundTrace(`hit_${type}_frozen`, score);
       return;
     }
 
     if (type === 'bomb') {
+      pushRoundTrace('hit_bomb', score);
       endGame(false);
       return;
     }
@@ -481,6 +506,7 @@ function onGameClick(e: MouseEvent) {
       score += 1;
     }
     updateScore();
+    pushRoundTrace(`hit_${type}`, score);
     return;
   }
 }
