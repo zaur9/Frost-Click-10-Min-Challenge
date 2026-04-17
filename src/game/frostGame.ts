@@ -43,6 +43,8 @@ const SPAWN_TICK_MS = 150;
 const SPAWN_CHANCE_SNOW = 0.45;
 const SPAWN_CHANCE_BOMB = 0.5;
 const SPAWN_CHANCE_GIFT = 0.18;
+const MAX_ACTIVE_OBJECTS = 60;
+const HIGH_LOAD_OBJECT_THRESHOLD = 45;
 
 const PLAYFIELD_TOP_OFFSET = 78;
 
@@ -117,6 +119,7 @@ function getPlayfieldBounds() {
 
 function createObject(emoji: string, type: string, speed: number) {
   if (!gameActive || isPaused || !gameRoot) return;
+  if (objects.length >= MAX_ACTIVE_OBJECTS) return;
 
   const obj = document.createElement('div');
   obj.className = 'object';
@@ -268,6 +271,9 @@ function spawnTick() {
   if (!gameActive || isPaused || isFrozen) return;
 
   const now = Date.now();
+  const activeObjects = objects.length;
+  const highLoad = activeObjects >= HIGH_LOAD_OBJECT_THRESHOLD;
+  const allowNetworkDrops = activeObjects < MAX_ACTIVE_OBJECTS;
 
   if (now - lastIceSpawn >= ICE_INTERVAL) {
     createObject('🧊', 'ice', 80);
@@ -275,33 +281,37 @@ function spawnTick() {
     pushRoundTrace('spawn_ice', 1);
   }
 
-  if (now - lastSomniaDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
+  if (allowNetworkDrops && now - lastSomniaDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
     lastSomniaDropFast = now;
     pushRoundTrace('spawn_somnia_fast', 1);
   }
 
-  if (now - lastSomniaDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
+  if (allowNetworkDrops && now - lastSomniaDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
     createObject('', 'somnia', 70 + Math.random() * 30);
     lastSomniaDropSlow = now;
     pushRoundTrace('spawn_somnia_slow', 1);
   }
 
-  if (now - lastApeDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
+  if (allowNetworkDrops && now - lastApeDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
     createObject('', 'ape-logo', 70 + Math.random() * 30);
     lastApeDropFast = now;
     pushRoundTrace('spawn_ape_fast', 1);
   }
 
-  if (now - lastApeDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
+  if (allowNetworkDrops && now - lastApeDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
     createObject('', 'ape-logo', 70 + Math.random() * 30);
     lastApeDropSlow = now;
     pushRoundTrace('spawn_ape_slow', 1);
   }
 
-  if (Math.random() < SPAWN_CHANCE_SNOW) createObject('❄️', 'snow', 140 + Math.random() * 70);
-  if (Math.random() < SPAWN_CHANCE_BOMB) createObject('💣', 'bomb', 160 + Math.random() * 90);
-  if (Math.random() < SPAWN_CHANCE_GIFT) createObject('🎁', 'gift', 120 + Math.random() * 60);
+  const loadFactor = highLoad ? 0.45 : 1;
+  if (Math.random() < SPAWN_CHANCE_SNOW * loadFactor)
+    createObject('❄️', 'snow', 140 + Math.random() * 70);
+  if (Math.random() < SPAWN_CHANCE_BOMB * loadFactor)
+    createObject('💣', 'bomb', 160 + Math.random() * 90);
+  if (Math.random() < SPAWN_CHANCE_GIFT * loadFactor)
+    createObject('🎁', 'gift', 120 + Math.random() * 60);
 }
 
 export async function updatePersonalBest() {
