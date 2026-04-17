@@ -23,6 +23,7 @@ let objects: {
   width: number;
   height: number;
 }[] = [];
+let objectPool: HTMLDivElement[] = [];
 let gameLoopId: number | null = null;
 let startTime = 0;
 let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -53,6 +54,7 @@ const SPAWN_CHANCE_BOMB = 0.5;
 const SPAWN_CHANCE_GIFT = 0.18;
 const MAX_ACTIVE_OBJECTS = 60;
 const HIGH_LOAD_OBJECT_THRESHOLD = 45;
+const FLASH_LOAD_THRESHOLD = 35;
 
 const PLAYFIELD_TOP_OFFSET = 78;
 
@@ -125,11 +127,34 @@ function getPlayfieldBounds() {
   return { left: side, right: window.innerWidth - side };
 }
 
+function getObjectSize(type: string) {
+  if (type === 'somnia' || type === 'ape-logo') return { width: 32, height: 32 };
+  return { width: 50, height: 50 };
+}
+
+function acquireObjectElement() {
+  const pooled = objectPool.pop();
+  if (pooled) return pooled;
+  const obj = document.createElement('div');
+  obj.className = 'object';
+  return obj;
+}
+
+function releaseObjectAt(index: number) {
+  const obj = objects[index];
+  obj.el.remove();
+  obj.el.className = 'object';
+  obj.el.textContent = '';
+  obj.el.removeAttribute('style');
+  objectPool.push(obj.el);
+  objects.splice(index, 1);
+}
+
 function createObject(emoji: string, type: string, speed: number) {
   if (!gameActive || isPaused || !gameRoot) return;
   if (objects.length >= MAX_ACTIVE_OBJECTS) return;
 
-  const obj = document.createElement('div');
+  const obj = acquireObjectElement();
   obj.className = 'object';
   if (type) obj.classList.add(type);
   if (type === 'bomb') obj.classList.add('bomb');
@@ -153,8 +178,9 @@ function createObject(emoji: string, type: string, speed: number) {
   obj.style.transform = `translateX(-50%) translateY(0px)`;
 
   gameRoot.appendChild(obj);
-  const width = Math.max(1, obj.offsetWidth || 50);
-  const height = Math.max(1, obj.offsetHeight || 50);
+  const size = getObjectSize(type);
+  const width = size.width;
+  const height = size.height;
   objects.push({ el: obj, type, y: 0, speed, x: spawnX, width, height });
 }
 
@@ -269,8 +295,7 @@ function gameLoop(timestamp: number) {
       obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
 
       if (obj.y > viewportHeight) {
-        obj.el.remove();
-        objects.splice(i, 1);
+        releaseObjectAt(i);
       }
     }
   }
@@ -376,7 +401,9 @@ function startGame() {
   gameActive = true;
   isFrozen = false;
   isPaused = false;
-  objects = [];
+  for (let i = objects.length - 1; i >= 0; i--) {
+    releaseObjectAt(i);
+  }
 
   pauseStart = null;
   pausedAccum = 0;
@@ -394,8 +421,6 @@ function startGame() {
 
   const pauseO = document.getElementById('pause-overlay');
   if (pauseO) pauseO.style.display = 'none';
-
-  document.querySelectorAll('.object').forEach((el) => el.remove());
 
   if (timerInterval) clearInterval(timerInterval);
   if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
@@ -490,15 +515,16 @@ function onGameClick(e: MouseEvent) {
 
     const type = obj.type;
 
-    obj.el.remove();
-    objects.splice(i, 1);
+    releaseObjectAt(i);
 
-    const flash = document.createElement('div');
-    flash.className = 'neon-flash';
-    flash.style.left = obj.x - 20 + 'px';
-    flash.style.top = top + obj.height / 2 - 20 + 'px';
-    gameRoot.appendChild(flash);
-    setTimeout(() => flash.remove(), 250);
+    if (objects.length < FLASH_LOAD_THRESHOLD) {
+      const flash = document.createElement('div');
+      flash.className = 'neon-flash';
+      flash.style.left = obj.x - 20 + 'px';
+      flash.style.top = top + obj.height / 2 - 20 + 'px';
+      gameRoot.appendChild(flash);
+      setTimeout(() => flash.remove(), 250);
+    }
 
     if (isFrozen) {
       if (type === 'snow') score += 1;
@@ -580,8 +606,9 @@ function onBackToStartClick(options: MountFrostGameOptions) {
   isFrozen = false;
   pauseStart = null;
   pausedAccum = 0;
-  document.querySelectorAll('.object').forEach((el) => el.remove());
-  objects = [];
+  for (let i = objects.length - 1; i >= 0; i--) {
+    releaseObjectAt(i);
+  }
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
   const pauseOverlay = document.getElementById('pause-overlay');
@@ -680,5 +707,6 @@ export function mountFrostGame(options: MountFrostGameOptions): () => void {
     bgMusic = null;
     musicToggleGame = null;
     objects = [];
+    objectPool = [];
   };
 }
