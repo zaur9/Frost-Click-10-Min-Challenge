@@ -5,7 +5,13 @@ import { CONFIG } from '../config';
 import { apeChain, somnia } from '../lib/chains';
 import { frostAbi } from '../lib/frostAbi';
 import { wagmiConfig } from '../lib/wagmiConfig';
-import { consumeScoreAfterSubmit, getScore, setUserAccount } from '../game/frostGame';
+import {
+  consumeScoreAfterSubmit,
+  getRoundDurationSeconds,
+  getRoundTraceSeed,
+  getScore,
+  setUserAccount,
+} from '../game/frostGame';
 import { refreshBattleTotalsDOM } from './leaderboard';
 
 const NICKNAME_KNOWN_KEY = 'frost.nickname.known';
@@ -154,6 +160,27 @@ function displayNameFor(addr: string, nickname: string) {
   const n = normalizeNickname(nickname);
   if (n) return n;
   return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+async function readSubmitRules(net: NonNullable<ReturnType<typeof getNetworkByChainId>>) {
+  const [minRound, maxRound] = await Promise.all([
+    readContract(wagmiConfig, {
+      address: net.contractAddress,
+      abi: frostAbi,
+      functionName: 'MIN_ROUND_DURATION',
+      chainId: net.chainId,
+    }),
+    readContract(wagmiConfig, {
+      address: net.contractAddress,
+      abi: frostAbi,
+      functionName: 'MAX_ROUND_DURATION',
+      chainId: net.chainId,
+    }),
+  ]);
+  return {
+    minRoundDuration: Number(minRound),
+    maxRoundDuration: Number(maxRound),
+  };
 }
 
 export async function saveNicknameFlow(prefilledNickname?: string | null): Promise<boolean> {
@@ -347,10 +374,44 @@ export async function handleSubmitScoreRequest(
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
+    const roundDuration = getRoundDurationSeconds();
+    const traceSeed = getRoundTraceSeed();
+    const traceHash = keccak256(
+      encodePacked(
+        ['string'],
+        [traceSeed || `fallback:${address}:${currentScore}:${roundDuration}:${timestamp}`]
+      )
+    );
+    const nonce = (await readContract(wagmiConfig, {
+      address: targetNet.contractAddress,
+      abi: frostAbi,
+      functionName: 'nextNonce',
+      args: [address],
+      chainId: targetNet.chainId,
+    })) as bigint;
+    const rules = await readSubmitRules(targetNet);
+    if (
+      !Number.isFinite(roundDuration) ||
+      roundDuration < rules.minRoundDuration ||
+      roundDuration > rules.maxRoundDuration
+    ) {
+      throw new Error(
+        `Round duration must be ${rules.minRoundDuration}-${rules.maxRoundDuration} sec (now: ${roundDuration})`
+      );
+    }
     const messageHash = keccak256(
       encodePacked(
-        ['address', 'uint32', 'uint32', 'address', 'uint256'],
-        [address, currentScore, timestamp, targetNet.contractAddress, BigInt(targetNet.chainId)]
+        ['address', 'uint32', 'uint32', 'uint64', 'bytes32', 'uint32', 'address', 'uint256'],
+        [
+          address,
+          currentScore,
+          roundDuration,
+          nonce,
+          traceHash,
+          timestamp,
+          targetNet.contractAddress,
+          BigInt(targetNet.chainId),
+        ]
       )
     );
 
@@ -368,8 +429,8 @@ export async function handleSubmitScoreRequest(
     const hash = await walletClient.writeContract({
       address: targetNet.contractAddress,
       abi: frostAbi,
-      functionName: 'submitScoreSigned',
-      args: [currentScore, timestamp, v, r, s],
+      functionName: 'submitScoreV2',
+      args: [currentScore, roundDuration, nonce, traceHash, timestamp, v, r, s],
       chain: targetNet.chain,
       account: address,
     });
