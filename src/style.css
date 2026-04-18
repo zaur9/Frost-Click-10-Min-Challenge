@@ -364,7 +364,7 @@ body {
   transform: translateX(-50%);
   transition: none;
   will-change: transform;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 8;
 }
 
