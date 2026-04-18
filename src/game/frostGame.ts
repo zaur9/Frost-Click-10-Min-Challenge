@@ -24,9 +24,11 @@ let objects: {
   height: number;
 }[] = [];
 let objectPool: HTMLDivElement[] = [];
+let flashPool: HTMLDivElement[] = [];
 let gameLoopId: number | null = null;
 let startTime = 0;
 let timerInterval: ReturnType<typeof setInterval> | null = null;
+let freezeCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
 let lastFrameTime: number | null = null;
 let spawnAccumulatorMs = 0;
@@ -77,6 +79,9 @@ let backToStartBtn: HTMLButtonElement | null = null;
 let startBtn: HTMLButtonElement | null = null;
 let pbScoreEl: HTMLElement | null = null;
 let playfieldBgEl: HTMLElement | null = null;
+let cachedPlayfieldLeft = window.innerWidth * 0.28;
+let cachedPlayfieldRight = window.innerWidth - cachedPlayfieldLeft;
+let cachedPlayfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
 
 let musicEnabled = false;
 let bgMusic: HTMLAudioElement | null = null;
@@ -117,14 +122,24 @@ function formatTime(ms: number) {
 }
 
 function getPlayfieldBounds() {
+  return { left: cachedPlayfieldLeft, right: cachedPlayfieldRight };
+}
+
+function refreshPlayfieldMetrics() {
   if (playfieldBgEl) {
     const rect = playfieldBgEl.getBoundingClientRect();
     if (rect.width > 0) {
-      return { left: rect.left, right: rect.right };
+      cachedPlayfieldLeft = rect.left;
+      cachedPlayfieldRight = rect.right;
+      cachedPlayfieldHeight = Math.max(0, rect.height);
+      return;
     }
   }
+
   const side = window.innerWidth * 0.28;
-  return { left: side, right: window.innerWidth - side };
+  cachedPlayfieldLeft = side;
+  cachedPlayfieldRight = window.innerWidth - side;
+  cachedPlayfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
 }
 
 function getObjectSize(type: string) {
@@ -140,6 +155,14 @@ function acquireObjectElement() {
   return obj;
 }
 
+function acquireFlashElement() {
+  const pooled = flashPool.pop();
+  if (pooled) return pooled;
+  const flash = document.createElement('div');
+  flash.className = 'neon-flash';
+  return flash;
+}
+
 function releaseObjectAt(index: number) {
   const obj = objects[index];
   obj.el.remove();
@@ -147,7 +170,11 @@ function releaseObjectAt(index: number) {
   obj.el.textContent = '';
   obj.el.removeAttribute('style');
   objectPool.push(obj.el);
-  objects.splice(index, 1);
+  const lastIndex = objects.length - 1;
+  if (index !== lastIndex) {
+    objects[index] = objects[lastIndex];
+  }
+  objects.pop();
 }
 
 function createObject(emoji: string, type: string, speed: number) {
@@ -188,7 +215,9 @@ function endGame(isWin: boolean) {
   gameActive = false;
 
   if (timerInterval) clearInterval(timerInterval);
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
   timerInterval = null;
+  freezeCountdownInterval = null;
   if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
   gameLoopId = null;
 
@@ -211,7 +240,6 @@ function activateFreeze() {
   isFrozen = true;
   const bounds = getPlayfieldBounds();
   const playfieldWidth = Math.max(0, bounds.right - bounds.left);
-  const playfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
 
   const overlay = document.createElement('div');
   overlay.id = 'freeze-overlay';
@@ -220,16 +248,7 @@ function activateFreeze() {
     top: `${PLAYFIELD_TOP_OFFSET}px`,
     left: `${bounds.left}px`,
     width: `${playfieldWidth}px`,
-    height: `${playfieldHeight}px`,
-    background: `
-      radial-gradient(120% 95% at 15% 0%, rgba(230,248,255,0.45) 0%, rgba(188,225,255,0.13) 52%, rgba(132,182,236,0.08) 100%),
-      radial-gradient(130px 100px at 24% 18%, rgba(225,248,255,0.22) 0%, rgba(225,248,255,0) 75%),
-      radial-gradient(160px 120px at 76% 62%, rgba(225,248,255,0.17) 0%, rgba(225,248,255,0) 78%),
-      repeating-linear-gradient(132deg, transparent 0 21px, rgba(234,250,255,0.24) 21px 22px, transparent 22px 63px),
-      repeating-linear-gradient(47deg, transparent 0 34px, rgba(229,247,255,0.18) 34px 35px, transparent 35px 87px),
-      repeating-linear-gradient(16deg, transparent 0 54px, rgba(220,242,255,0.12) 54px 55px, transparent 55px 126px),
-      rgba(148,205,248,0.18)
-    `,
+    height: `${cachedPlayfieldHeight}px`,
     pointerEvents: 'none',
     zIndex: '5',
   });
@@ -251,13 +270,15 @@ function activateFreeze() {
 
   let timeLeft = 5;
 
-  const countdown = setInterval(() => {
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = setInterval(() => {
     timeLeft--;
 
     if (timeLeft > 0) {
       freezeTimer.textContent = `Freeze: ${timeLeft}s`;
     } else {
-      clearInterval(countdown);
+      if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+      freezeCountdownInterval = null;
       freezeTimer.remove();
       overlay.remove();
       isFrozen = false;
@@ -286,13 +307,13 @@ function gameLoop(timestamp: number) {
     }
   }
 
-  const viewportHeight = window.innerHeight;
+  const viewportHeight = cachedPlayfieldHeight;
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i];
 
     if (!isFrozen) {
       obj.y += obj.speed * dt;
-      obj.el.style.transform = `translateX(-50%) translateY(${obj.y}px)`;
+      obj.el.style.transform = `translate3d(-50%, ${obj.y}px, 0)`;
 
       if (obj.y > viewportHeight) {
         releaseObjectAt(i);
@@ -418,6 +439,8 @@ function startGame() {
 
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = null;
 
   const pauseO = document.getElementById('pause-overlay');
   if (pauseO) pauseO.style.display = 'none';
@@ -431,6 +454,7 @@ function startGame() {
   lastRoundDurationSec = 0;
   roundTraceSeed = `v2:${startTime}:${Math.floor(Math.random() * 1_000_000)}`;
   pushRoundTrace('start', 0);
+  refreshPlayfieldMetrics();
 
   lastIceSpawn = startTime;
 
@@ -518,12 +542,16 @@ function onGameClick(e: MouseEvent) {
     releaseObjectAt(i);
 
     if (objects.length < FLASH_LOAD_THRESHOLD) {
-      const flash = document.createElement('div');
-      flash.className = 'neon-flash';
+      const flash = acquireFlashElement();
+      flash.className = 'neon-flash neon-flash-active';
       flash.style.left = obj.x - 20 + 'px';
       flash.style.top = top + obj.height / 2 - 20 + 'px';
       gameRoot.appendChild(flash);
-      setTimeout(() => flash.remove(), 250);
+      window.setTimeout(() => {
+        flash.className = 'neon-flash';
+        flash.remove();
+        flashPool.push(flash);
+      }, 180);
     }
 
     if (isFrozen) {
@@ -611,6 +639,8 @@ function onBackToStartClick(options: MountFrostGameOptions) {
   }
   document.getElementById('freeze-overlay')?.remove();
   document.getElementById('freeze-timer')?.remove();
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = null;
   const pauseOverlay = document.getElementById('pause-overlay');
   if (pauseOverlay) pauseOverlay.style.display = 'none';
   if (gameOverEl) gameOverEl.style.display = 'none';
@@ -651,6 +681,9 @@ export function mountFrostGame(options: MountFrostGameOptions): () => void {
     throw new Error('mountFrostGame: #game not found');
   }
 
+  refreshPlayfieldMetrics();
+  const onResize = () => refreshPlayfieldMetrics();
+  window.addEventListener('resize', onResize);
   gameRoot.addEventListener('click', onGameClick);
 
   const onStartClick = () => {
@@ -674,6 +707,7 @@ export function mountFrostGame(options: MountFrostGameOptions): () => void {
 
   return () => {
     gameRoot?.removeEventListener('click', onGameClick);
+    window.removeEventListener('resize', onResize);
     startBtn?.removeEventListener('click', onStartClick);
     pauseBtn?.removeEventListener('click', onPauseClick);
     backToStartBtn?.removeEventListener('click', onBackClick);
@@ -684,8 +718,10 @@ export function mountFrostGame(options: MountFrostGameOptions): () => void {
     musicToggleGame?.removeEventListener('click', toggleMusic);
 
     if (timerInterval) clearInterval(timerInterval);
+    if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
     if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
     timerInterval = null;
+    freezeCountdownInterval = null;
     gameLoopId = null;
     gameActive = false;
 
@@ -708,5 +744,6 @@ export function mountFrostGame(options: MountFrostGameOptions): () => void {
     musicToggleGame = null;
     objects = [];
     objectPool = [];
+    flashPool = [];
   };
 }
