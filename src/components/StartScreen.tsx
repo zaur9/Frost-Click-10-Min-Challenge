@@ -1,177 +1,34 @@
-import { useConnectModal } from '@rainbow-me/rainbowkit';
-import { useState } from 'react';
-import { useAccount, useChainId } from 'wagmi';
-import { switchChain } from 'wagmi/actions';
-import { CONFIG } from '../config';
-import { wagmiConfig } from '../lib/wagmiConfig';
-import {
-  clearPendingNicknameBeforeConnect,
-  hasKnownNicknameForNetwork,
-  type PreferredNetworkKey,
-  queueNicknameBeforeConnect,
-  setPreferredNetworkBeforeConnect,
-  validateNicknameInput,
-} from '../wallet/walletWrites';
-
 type Props = {
   started: boolean;
+  onConnectRequest: () => void;
 };
 
-export function StartScreen({ started }: Props) {
-  const { openConnectModal } = useConnectModal();
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
-  const [showNicknameModal, setShowNicknameModal] = useState(false);
-  const [nickname, setNickname] = useState('');
-  const [nicknameError, setNicknameError] = useState('');
-  const [selectedNetwork, setSelectedNetwork] = useState<PreferredNetworkKey>('somnia');
-  const [needsNickname, setNeedsNickname] = useState(false);
-
-  const onConnectClick = () => {
-    const effectiveNetwork: PreferredNetworkKey =
-      isConnected && chainId === CONFIG.APECHAIN_CHAIN_ID ? 'ape' : selectedNetwork;
-    if (isConnected) setSelectedNetwork(effectiveNetwork);
-    const knownForSelected = hasKnownNicknameForNetwork(effectiveNetwork);
-    const requireNickname = !isConnected && !knownForSelected;
-    if (!requireNickname) {
-      clearPendingNicknameBeforeConnect();
-    }
-    setNeedsNickname(requireNickname);
-    setNicknameError('');
-    setShowNicknameModal(true);
-  };
-
-  const onNicknameConfirm = async () => {
-    const knownForSelected = hasKnownNicknameForNetwork(selectedNetwork);
-    const requireNickname = !knownForSelected;
-    if (requireNickname) {
-      const error = validateNicknameInput(nickname);
-      if (error) {
-        setNicknameError(error);
-        return;
-      }
-      if (!queueNicknameBeforeConnect(nickname)) {
-        setNicknameError('Nickname is invalid');
-        return;
-      }
-    } else {
-      clearPendingNicknameBeforeConnect();
-    }
-    setPreferredNetworkBeforeConnect(selectedNetwork);
-    setNickname('');
-    setNicknameError('');
-    setShowNicknameModal(false);
-    if (!isConnected) {
-      openConnectModal?.();
-      return;
-    }
-    const targetChainId =
-      selectedNetwork === 'ape' ? CONFIG.APECHAIN_CHAIN_ID : CONFIG.SOMNIA_CHAIN_ID;
-    if (chainId !== targetChainId) {
-      try {
-        await switchChain(wagmiConfig, { chainId: targetChainId });
-      } catch {
-        // user may reject switch in wallet
-      }
-    }
-  };
-
-  const onNicknameCancel = () => {
-    setNickname('');
-    setNicknameError('');
-    setShowNicknameModal(false);
-  };
-
+export function StartScreen({ started, onConnectRequest }: Props) {
   return (
     <div id="start-screen" style={{ display: started ? 'none' : 'flex' }}>
       <div id="start-header-actions" className="start-header-actions-rk">
-        <button type="button" id="start-connect-wallet" onClick={onConnectClick}>
+        <button type="button" id="start-connect-wallet" onClick={onConnectRequest}>
           Connect Wallet
         </button>
       </div>
       <h1>Mini Games</h1>
       <div id="games-grid">
         <div className="game-card active">
-          <h3>❄️ Frost Click</h3>
+          <h3>вќ„пёЏ Frost Click</h3>
           <p>Network battle mode</p>
           <button type="button" id="start-btn">
             Start Game
           </button>
         </div>
         <div className="game-card soon">
-          <h3>🎮 Coming Soon</h3>
+          <h3>рџЋ® Coming Soon</h3>
           <p>Mini game #2</p>
         </div>
         <div className="game-card soon">
-          <h3>🎮 Coming Soon</h3>
+          <h3>рџЋ® Coming Soon</h3>
           <p>Mini game #3</p>
         </div>
       </div>
-      {showNicknameModal && (
-        <div className="nickname-modal-backdrop" role="presentation" onClick={onNicknameCancel}>
-          <div
-            className="nickname-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Set nickname"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>{needsNickname ? 'Choose nickname and network' : 'Choose network'}</h3>
-            {needsNickname && (
-              <>
-                <input
-                  type="text"
-                  value={nickname}
-                  maxLength={16}
-                  autoFocus
-                  placeholder="3-16 characters"
-                  onChange={(e) => {
-                    setNickname(e.target.value);
-                    if (nicknameError) setNicknameError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') onNicknameConfirm();
-                    if (e.key === 'Escape') onNicknameCancel();
-                  }}
-                />
-                {nicknameError && <div className="nickname-modal-error">{nicknameError}</div>}
-              </>
-            )}
-            <div className="network-select">
-              <button
-                type="button"
-                className={selectedNetwork === 'somnia' ? 'active' : ''}
-                onClick={() => {
-                  setSelectedNetwork('somnia');
-                  setNeedsNickname(!hasKnownNicknameForNetwork('somnia'));
-                  setNicknameError('');
-                }}
-              >
-                Somnia
-              </button>
-              <button
-                type="button"
-                className={selectedNetwork === 'ape' ? 'active' : ''}
-                onClick={() => {
-                  setSelectedNetwork('ape');
-                  setNeedsNickname(!hasKnownNicknameForNetwork('ape'));
-                  setNicknameError('');
-                }}
-              >
-                ApeChain
-              </button>
-            </div>
-            <div className="nickname-modal-actions">
-              <button type="button" onClick={onNicknameCancel}>
-                Cancel
-              </button>
-              <button type="button" onClick={onNicknameConfirm}>
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
