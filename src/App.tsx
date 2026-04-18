@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { GameArena } from './components/GameArena';
 import { StartScreen } from './components/StartScreen';
 import { mountFrostGame } from './game/frostGame';
-import { WalletEffects } from './wallet/WalletEffects';
+
+const WalletRuntime = lazy(() => import('./wallet/WalletRuntime'));
 
 export default function App() {
   const [started, setStarted] = useState(false);
+  const [walletEnabled, setWalletEnabled] = useState(false);
+  const [walletOpenRequestId, setWalletOpenRequestId] = useState(0);
 
   useEffect(() => {
     document.body.classList.toggle('perf-mode', started);
@@ -20,14 +23,23 @@ export default function App() {
     return cleanup;
   }, []);
 
+  const onConnectRequest = () => {
+    setWalletEnabled(true);
+    setWalletOpenRequestId((value) => value + 1);
+  };
+
   return (
     <>
-      <WalletEffects />
       <GameArena />
       <audio id="bg-music" loop>
         <source src="/music.mp3" type="audio/mpeg" />
       </audio>
-      <StartScreen started={started} />
+      <StartScreen started={started} onConnectRequest={onConnectRequest} />
+      {walletEnabled ? (
+        <Suspense fallback={null}>
+          <WalletRuntime openRequestId={walletOpenRequestId} />
+        </Suspense>
+      ) : null}
     </>
   );
 }
