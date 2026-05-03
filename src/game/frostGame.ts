@@ -1,0 +1,781 @@
+import { readContract } from 'wagmi/actions';
+import { getAccount } from 'wagmi/actions';
+import { CONFIG } from '../config';
+import { frostAbi } from '../lib/frostAbi';
+import { wagmiConfig } from '../lib/wagmiConfig';
+
+export type MountFrostGameOptions = {
+  onLeaveStartScreen: () => void;
+  onReturnToStartScreen: () => void;
+};
+
+let score = 0;
+let gameActive = false;
+let isFrozen = false;
+let isPaused = false;
+
+let objects: {
+  el: HTMLDivElement;
+  type: string;
+  y: number;
+  speed: number;
+  x: number;
+  width: number;
+  height: number;
+}[] = [];
+let objectPool: HTMLDivElement[] = [];
+let flashPool: HTMLDivElement[] = [];
+let gameLoopId: number | null = null;
+let startTime = 0;
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+let freezeCountdownInterval: ReturnType<typeof setInterval> | null = null;
+
+let lastFrameTime: number | null = null;
+let spawnAccumulatorMs = 0;
+
+const HIT_PADDING_BOTTOM = 12;
+const HIT_PADDING_SNOW_TOP = 12;
+const HIT_PADDING_SNOW_SIDE = 4;
+
+let pauseStart: number | null = null;
+let pausedAccum = 0;
+
+const NETWORK_DROP_INTERVAL_FAST_MS = 5_000;
+const NETWORK_DROP_INTERVAL_SLOW_MS = 6_000;
+let lastSomniaDropFast = 0;
+let lastSomniaDropSlow = 0;
+let lastApeDropFast = 0;
+let lastApeDropSlow = 0;
+
+let lastIceSpawn = 0;
+const ICE_INTERVAL = 29 * 1000;
+
+const SPAWN_TICK_MS = 150;
+const SPAWN_CHANCE_SNOW = 0.45;
+const SPAWN_CHANCE_BOMB = 0.5;
+const SPAWN_CHANCE_GIFT = 0.18;
+const MAX_ACTIVE_OBJECTS = 60;
+const HIGH_LOAD_OBJECT_THRESHOLD = 45;
+const FLASH_LOAD_THRESHOLD = 35;
+/** Cap physics delta so a stalled rAF frame does not teleport objects off-screen. */
+const MAX_PHYSICS_FRAME_MS = 200;
+/** Max spawn logic steps per frame — avoids one-frame spike after tab resume. */
+const MAX_SPAWN_TICKS_PER_FRAME = 5;
+
+let personalBestDebounce: ReturnType<typeof setTimeout> | null = null;
+
+const PLAYFIELD_TOP_OFFSET = 78;
+
+let userAccount: string | null = null;
+let roundTraceSeed = '';
+let lastRoundDurationSec = 0;
+
+let gameRoot: HTMLElement | null = null;
+let scoreEl: HTMLElement | null = null;
+let timerEl: HTMLElement | null = null;
+let gameOverEl: HTMLElement | null = null;
+let resultTitle: HTMLElement | null = null;
+let finalScoreEl: HTMLElement | null = null;
+let timeSurvivedEl: HTMLElement | null = null;
+let restartBtn: HTMLButtonElement | null = null;
+let gameOverSubmitApeBtn: HTMLButtonElement | null = null;
+let gameOverSubmitSomniaBtn: HTMLButtonElement | null = null;
+let pauseBtn: HTMLButtonElement | null = null;
+let backToStartBtn: HTMLButtonElement | null = null;
+let startBtn: HTMLButtonElement | null = null;
+let pbScoreEl: HTMLElement | null = null;
+let playfieldBgEl: HTMLElement | null = null;
+let cachedPlayfieldLeft = window.innerWidth * 0.28;
+let cachedPlayfieldRight = window.innerWidth - cachedPlayfieldLeft;
+let cachedPlayfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
+
+let musicEnabled = false;
+let bgMusic: HTMLAudioElement | null = null;
+let musicToggleGame: HTMLButtonElement | null = null;
+
+export function setUserAccount(addr: string | null) {
+  userAccount = addr;
+  void updatePersonalBest();
+}
+
+export const getScore = () => score;
+export const isGameActive = () => gameActive;
+export const getRoundDurationSeconds = () => Math.max(0, lastRoundDurationSec);
+export const getRoundTraceSeed = () => roundTraceSeed;
+export function consumeScoreAfterSubmit() {
+  score = 0;
+  updateScore();
+}
+
+function pushRoundTrace(tag: string, value: number) {
+  if (!roundTraceSeed) return;
+  const elapsedMs = Math.max(0, Date.now() - startTime - pausedAccum);
+  roundTraceSeed += `|${tag}:${elapsedMs}:${value}:${objects.length}`;
+  if (roundTraceSeed.length > 3500) {
+    roundTraceSeed = roundTraceSeed.slice(roundTraceSeed.length - 3500);
+  }
+}
+
+function updateScore() {
+  if (scoreEl) scoreEl.textContent = `Score: ${score}`;
+}
+
+function formatTime(ms: number) {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+}
+
+function getPlayfieldBounds() {
+  return { left: cachedPlayfieldLeft, right: cachedPlayfieldRight };
+}
+
+function refreshPlayfieldMetrics() {
+  if (playfieldBgEl) {
+    const rect = playfieldBgEl.getBoundingClientRect();
+    if (rect.width > 0) {
+      cachedPlayfieldLeft = rect.left;
+      cachedPlayfieldRight = rect.right;
+      cachedPlayfieldHeight = Math.max(0, rect.height);
+      return;
+    }
+  }
+
+  const side = window.innerWidth * 0.28;
+  cachedPlayfieldLeft = side;
+  cachedPlayfieldRight = window.innerWidth - side;
+  cachedPlayfieldHeight = Math.max(0, window.innerHeight - PLAYFIELD_TOP_OFFSET);
+}
+
+function getObjectSize(type: string) {
+  if (type === 'somnia' || type === 'ape-logo') return { width: 32, height: 32 };
+  return { width: 50, height: 50 };
+}
+
+function acquireObjectElement() {
+  const pooled = objectPool.pop();
+  if (pooled) return pooled;
+  const obj = document.createElement('div');
+  obj.className = 'object';
+  return obj;
+}
+
+function acquireFlashElement() {
+  const pooled = flashPool.pop();
+  if (pooled) return pooled;
+  const flash = document.createElement('div');
+  flash.className = 'neon-flash';
+  return flash;
+}
+
+function releaseObjectAt(index: number) {
+  const obj = objects[index];
+  obj.el.remove();
+  obj.el.className = 'object';
+  obj.el.textContent = '';
+  obj.el.removeAttribute('style');
+  objectPool.push(obj.el);
+  const lastIndex = objects.length - 1;
+  if (index !== lastIndex) {
+    objects[index] = objects[lastIndex];
+  }
+  objects.pop();
+}
+
+function createObject(emoji: string, type: string, speed: number) {
+  if (!gameActive || isPaused || !gameRoot) return;
+  if (objects.length >= MAX_ACTIVE_OBJECTS) return;
+
+  const obj = acquireObjectElement();
+  obj.className = 'object';
+  if (type) obj.classList.add(type);
+  if (type === 'bomb') obj.classList.add('bomb');
+
+  obj.style.top = `${PLAYFIELD_TOP_OFFSET}px`;
+
+  if (type === 'somnia' || type === 'ape-logo') {
+    obj.style.width = '32px';
+    obj.style.height = '32px';
+    obj.style.display = 'block';
+    obj.textContent = ' ';
+  } else {
+    obj.textContent = emoji;
+  }
+
+  const bounds = getPlayfieldBounds();
+  const spawnMinX = bounds.left + 24;
+  const spawnMaxX = bounds.right - 24;
+  const spawnX = spawnMinX + Math.random() * Math.max(1, spawnMaxX - spawnMinX);
+  obj.style.left = `${spawnX}px`;
+  obj.style.transform = `translate3d(-50%, 0px, 0)`;
+
+  gameRoot.appendChild(obj);
+  const size = getObjectSize(type);
+  const width = size.width;
+  const height = size.height;
+  objects.push({ el: obj, type, y: 0, speed, x: spawnX, width, height });
+}
+
+function endGame(isWin: boolean) {
+  gameActive = false;
+
+  if (timerInterval) clearInterval(timerInterval);
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  timerInterval = null;
+  freezeCountdownInterval = null;
+  if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
+  gameLoopId = null;
+
+  const elapsed = Date.now() - startTime - pausedAccum;
+  lastRoundDurationSec = Math.max(0, Math.floor(elapsed / 1000));
+  pushRoundTrace(isWin ? 'finish_win' : 'finish_lose', score);
+
+  if (resultTitle) resultTitle.textContent = isWin ? '🎉 You Survived 10 Minutes! 🎉' : 'Game Over!';
+  if (finalScoreEl) finalScoreEl.textContent = `Final Score: ${score}`;
+  if (timeSurvivedEl) timeSurvivedEl.textContent = `Time: ${formatTime(elapsed)}`;
+
+  if (gameOverEl) gameOverEl.style.display = 'block';
+  if (gameOverSubmitApeBtn) gameOverSubmitApeBtn.style.display = 'inline-block';
+  if (gameOverSubmitSomniaBtn) gameOverSubmitSomniaBtn.style.display = 'inline-block';
+}
+
+function activateFreeze() {
+  if (isFrozen || !gameRoot) return;
+
+  isFrozen = true;
+  const bounds = getPlayfieldBounds();
+  const playfieldWidth = Math.max(0, bounds.right - bounds.left);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'freeze-overlay';
+  Object.assign(overlay.style, {
+    position: 'absolute',
+    top: `${PLAYFIELD_TOP_OFFSET}px`,
+    left: `${bounds.left}px`,
+    width: `${playfieldWidth}px`,
+    height: `${cachedPlayfieldHeight}px`,
+    pointerEvents: 'none',
+    zIndex: '5',
+  });
+  gameRoot.appendChild(overlay);
+
+  const freezeTimer = document.createElement('div');
+  freezeTimer.id = 'freeze-timer';
+  Object.assign(freezeTimer.style, {
+    position: 'absolute',
+    top: `${PLAYFIELD_TOP_OFFSET + 10}px`,
+    left: `${bounds.left + playfieldWidth / 2}px`,
+    transform: 'translateX(-50%)',
+    color: '#a0e0ff',
+    fontSize: '20px',
+    zIndex: '10',
+  });
+  freezeTimer.textContent = 'Freeze: 5s';
+  gameRoot.appendChild(freezeTimer);
+
+  let timeLeft = 5;
+
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = setInterval(() => {
+    timeLeft--;
+
+    if (timeLeft > 0) {
+      freezeTimer.textContent = `Freeze: ${timeLeft}s`;
+    } else {
+      if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+      freezeCountdownInterval = null;
+      freezeTimer.remove();
+      overlay.remove();
+      isFrozen = false;
+    }
+  }, 1000);
+}
+
+function gameLoop(timestamp: number) {
+  if (!gameActive || isPaused) return;
+
+  if (lastFrameTime === null) {
+    lastFrameTime = timestamp;
+    gameLoopId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  const frameMs = timestamp - lastFrameTime;
+  const physicsMs = Math.min(frameMs, MAX_PHYSICS_FRAME_MS);
+  const dt = physicsMs / 1000;
+  lastFrameTime = timestamp;
+
+  if (!isFrozen) {
+    spawnAccumulatorMs += frameMs;
+    let spawnSteps = 0;
+    while (
+      spawnAccumulatorMs >= SPAWN_TICK_MS &&
+      spawnSteps < MAX_SPAWN_TICKS_PER_FRAME
+    ) {
+      spawnTick();
+      spawnAccumulatorMs -= SPAWN_TICK_MS;
+      spawnSteps++;
+    }
+  }
+
+  const viewportHeight = cachedPlayfieldHeight;
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const obj = objects[i];
+
+    if (!isFrozen) {
+      obj.y += obj.speed * dt;
+      obj.el.style.transform = `translate3d(-50%, ${obj.y}px, 0)`;
+
+      if (obj.y > viewportHeight) {
+        releaseObjectAt(i);
+      }
+    }
+  }
+
+  gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+function spawnTick() {
+  if (!gameActive || isPaused || isFrozen) return;
+
+  const now = Date.now();
+  const activeObjects = objects.length;
+  const highLoad = activeObjects >= HIGH_LOAD_OBJECT_THRESHOLD;
+  const allowNetworkDrops = activeObjects < MAX_ACTIVE_OBJECTS;
+
+  if (now - lastIceSpawn >= ICE_INTERVAL) {
+    createObject('🧊', 'ice', 80);
+    lastIceSpawn = now;
+    pushRoundTrace('spawn_ice', 1);
+  }
+
+  if (allowNetworkDrops && now - lastSomniaDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
+    createObject('', 'somnia', 70 + Math.random() * 30);
+    lastSomniaDropFast = now;
+    pushRoundTrace('spawn_somnia_fast', 1);
+  }
+
+  if (allowNetworkDrops && now - lastSomniaDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
+    createObject('', 'somnia', 70 + Math.random() * 30);
+    lastSomniaDropSlow = now;
+    pushRoundTrace('spawn_somnia_slow', 1);
+  }
+
+  if (allowNetworkDrops && now - lastApeDropFast >= NETWORK_DROP_INTERVAL_FAST_MS) {
+    createObject('', 'ape-logo', 70 + Math.random() * 30);
+    lastApeDropFast = now;
+    pushRoundTrace('spawn_ape_fast', 1);
+  }
+
+  if (allowNetworkDrops && now - lastApeDropSlow >= NETWORK_DROP_INTERVAL_SLOW_MS) {
+    createObject('', 'ape-logo', 70 + Math.random() * 30);
+    lastApeDropSlow = now;
+    pushRoundTrace('spawn_ape_slow', 1);
+  }
+
+  const loadFactor = highLoad ? 0.45 : 1;
+  if (Math.random() < SPAWN_CHANCE_SNOW * loadFactor)
+    createObject('❄️', 'snow', 140 + Math.random() * 70);
+  if (Math.random() < SPAWN_CHANCE_BOMB * loadFactor)
+    createObject('💣', 'bomb', 160 + Math.random() * 90);
+  if (Math.random() < SPAWN_CHANCE_GIFT * loadFactor)
+    createObject('🎁', 'gift', 120 + Math.random() * 60);
+}
+
+async function flushPersonalBest() {
+  const { address, chainId } = getAccount(wagmiConfig);
+  if (!address || !chainId || !userAccount) {
+    if (pbScoreEl) pbScoreEl.textContent = 'Best: 0';
+    return;
+  }
+  const contractAddr =
+    chainId === CONFIG.SOMNIA_CHAIN_ID
+      ? CONFIG.CONTRACT_ADDRESS
+      : chainId === CONFIG.APECHAIN_CHAIN_ID
+        ? CONFIG.APECHAIN_CONTRACT_ADDRESS
+        : null;
+  if (!contractAddr) {
+    if (pbScoreEl) pbScoreEl.textContent = 'Best: 0';
+    return;
+  }
+  const rkChain = chainId as typeof CONFIG.SOMNIA_CHAIN_ID | typeof CONFIG.APECHAIN_CHAIN_ID;
+  try {
+    const idxPlusOne = await readContract(wagmiConfig, {
+      address: contractAddr as `0x${string}`,
+      abi: frostAbi,
+      functionName: 'indexPlusOne',
+      args: [userAccount as `0x${string}`],
+      chainId: rkChain,
+    });
+    const idxNum = Number(idxPlusOne);
+    if (idxNum === 0) {
+      if (pbScoreEl) pbScoreEl.textContent = 'Best: 0';
+    } else {
+      const idx = idxNum - 1;
+      const entry = (await readContract(wagmiConfig, {
+        address: contractAddr as `0x${string}`,
+        abi: frostAbi,
+        functionName: 'leaderboard',
+        args: [BigInt(idx)],
+        chainId: rkChain,
+      })) as readonly [`0x${string}`, number, number];
+      if (pbScoreEl) pbScoreEl.textContent = 'Best: ' + entry[1];
+    }
+  } catch {
+    if (pbScoreEl) pbScoreEl.textContent = 'Best: ?';
+  }
+}
+
+/** Debounced so wallet + game do not stack duplicate RPC in one tick. */
+export function updatePersonalBest(): void {
+  if (personalBestDebounce) clearTimeout(personalBestDebounce);
+  personalBestDebounce = setTimeout(() => {
+    personalBestDebounce = null;
+    void flushPersonalBest();
+  }, 200);
+}
+
+function startGame() {
+  if (!gameRoot || !scoreEl || !timerEl || !gameOverEl || !pauseBtn || !backToStartBtn) return;
+
+  score = 0;
+  gameActive = true;
+  isFrozen = false;
+  isPaused = false;
+  for (let i = objects.length - 1; i >= 0; i--) {
+    releaseObjectAt(i);
+  }
+
+  pauseStart = null;
+  pausedAccum = 0;
+
+  scoreEl.textContent = 'Score: 0';
+  timerEl.textContent = '10:00';
+
+  gameOverEl.style.display = 'none';
+  pauseBtn.textContent = 'Pause';
+  backToStartBtn.style.display = 'block';
+  pauseBtn.style.display = 'block';
+
+  document.getElementById('freeze-overlay')?.remove();
+  document.getElementById('freeze-timer')?.remove();
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = null;
+
+  const pauseO = document.getElementById('pause-overlay');
+  if (pauseO) pauseO.style.display = 'none';
+
+  if (timerInterval) clearInterval(timerInterval);
+  if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
+  timerInterval = null;
+  gameLoopId = null;
+
+  startTime = Date.now();
+  lastRoundDurationSec = 0;
+  roundTraceSeed = `v2:${startTime}:${Math.floor(Math.random() * 1_000_000)}`;
+  pushRoundTrace('start', 0);
+  refreshPlayfieldMetrics();
+
+  lastIceSpawn = startTime;
+
+  lastFrameTime = null;
+  spawnAccumulatorMs = 0;
+
+  lastSomniaDropFast = startTime;
+  lastSomniaDropSlow = startTime;
+  lastApeDropFast = startTime;
+  lastApeDropSlow = startTime;
+
+  timerInterval = setInterval(() => {
+    if (isPaused) return;
+
+    const elapsed = Date.now() - startTime - pausedAccum;
+    const remaining = CONFIG.GAME_DURATION - elapsed;
+
+    if (remaining <= 0) {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      endGame(true);
+    } else if (timerEl) {
+      timerEl.textContent = formatTime(remaining);
+    }
+  }, 1000);
+
+  gameLoopId = requestAnimationFrame(gameLoop);
+  void updatePersonalBest();
+}
+
+function updateMusicButtons() {
+  const label = musicEnabled ? 'Music: ON' : 'Music: OFF';
+  if (musicToggleGame) musicToggleGame.textContent = label;
+}
+
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+
+  try {
+    if (musicEnabled) {
+      if (bgMusic) {
+        bgMusic.volume = 0.45;
+        void bgMusic.play().catch(() => {});
+      }
+    } else {
+      if (bgMusic) bgMusic.pause();
+    }
+  } catch {
+    /* silent */
+  }
+
+  updateMusicButtons();
+}
+
+function onGameClick(e: MouseEvent) {
+  if (!gameActive || isPaused || !gameRoot) return;
+
+  const x = e.clientX;
+  const y = e.clientY;
+
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const obj = objects[i];
+    const halfWidth = obj.width / 2;
+    const top = PLAYFIELD_TOP_OFFSET + obj.y;
+    const bottom = top + obj.height;
+    const left = obj.x - halfWidth;
+    const right = obj.x + halfWidth;
+
+    const isBomb = obj.type === 'bomb';
+    const isSnow = obj.type === 'snow';
+
+    const paddingBottom = isBomb ? 0 : isSnow ? 0 : HIT_PADDING_BOTTOM;
+    const paddingTop = isSnow ? HIT_PADDING_SNOW_TOP : 0;
+    const paddingSide = isSnow ? HIT_PADDING_SNOW_SIDE : 0;
+    const hit =
+      x >= left - paddingSide &&
+      x <= right + paddingSide &&
+      y >= top - paddingTop &&
+      y <= bottom + paddingBottom;
+
+    if (!hit) continue;
+
+    const type = obj.type;
+
+    releaseObjectAt(i);
+
+    if (objects.length < FLASH_LOAD_THRESHOLD) {
+      const flash = acquireFlashElement();
+      flash.className = 'neon-flash neon-flash-active';
+      flash.style.left = obj.x - 20 + 'px';
+      flash.style.top = top + obj.height / 2 - 20 + 'px';
+      gameRoot.appendChild(flash);
+      window.setTimeout(() => {
+        flash.className = 'neon-flash';
+        flash.remove();
+        flashPool.push(flash);
+      }, 180);
+    }
+
+    if (isFrozen) {
+      if (type === 'snow') score += 1;
+      else if (type === 'bomb') score += 3;
+      else if (type === 'gift') score += 5;
+      else if (type === 'ice') score += 2;
+      else if (type === 'toy-green' || type === 'toy-purple') score += 2;
+      else if (type === 'somnia' || type === 'ape-logo') score += 10;
+      updateScore();
+      pushRoundTrace(`hit_${type}_frozen`, score);
+      return;
+    }
+
+    if (type === 'bomb') {
+      pushRoundTrace('hit_bomb', score);
+      endGame(false);
+      return;
+    }
+
+    if (type === 'ice') {
+      activateFreeze();
+      score += 2;
+    } else if (type === 'toy-green' || type === 'toy-purple') {
+      score += 2;
+    } else if (type === 'somnia' || type === 'ape-logo') {
+      score += 10;
+    } else if (type === 'gift') {
+      score += 5;
+    } else {
+      score += 1;
+    }
+    updateScore();
+    pushRoundTrace(`hit_${type}`, score);
+    return;
+  }
+}
+
+function onPauseClick() {
+  if (!gameActive || !pauseBtn) return;
+
+  isPaused = !isPaused;
+
+  const pauseOverlay = document.getElementById('pause-overlay');
+
+  if (isPaused) {
+    pauseBtn.style.display = 'none';
+    if (pauseOverlay) pauseOverlay.style.display = 'flex';
+    pauseStart = Date.now();
+    if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
+    gameLoopId = null;
+  } else {
+    pauseBtn.style.display = 'block';
+    if (pauseOverlay) pauseOverlay.style.display = 'none';
+    if (pauseStart) {
+      pausedAccum += Date.now() - pauseStart;
+      pauseStart = null;
+    }
+    lastFrameTime = null;
+    gameLoopId = requestAnimationFrame(gameLoop);
+  }
+}
+
+function onResumeClick() {
+  pauseBtn?.click();
+}
+
+function onRestartClick() {
+  if (gameOverEl) gameOverEl.style.display = 'none';
+  startGame();
+}
+
+function onBackToStartClick(options: MountFrostGameOptions) {
+  if (timerInterval) clearInterval(timerInterval);
+  if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
+  timerInterval = null;
+  gameLoopId = null;
+  gameActive = false;
+  isPaused = false;
+  isFrozen = false;
+  pauseStart = null;
+  pausedAccum = 0;
+  for (let i = objects.length - 1; i >= 0; i--) {
+    releaseObjectAt(i);
+  }
+  document.getElementById('freeze-overlay')?.remove();
+  document.getElementById('freeze-timer')?.remove();
+  if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+  freezeCountdownInterval = null;
+  const pauseOverlay = document.getElementById('pause-overlay');
+  if (pauseOverlay) pauseOverlay.style.display = 'none';
+  if (gameOverEl) gameOverEl.style.display = 'none';
+  if (pauseBtn) pauseBtn.style.display = 'none';
+  if (backToStartBtn) backToStartBtn.style.display = 'none';
+  options.onReturnToStartScreen();
+}
+
+function onSubmitApe() {
+  window.dispatchEvent(new CustomEvent('submit-score-request', { detail: { network: 'ape' } }));
+}
+
+function onSubmitSomnia() {
+  window.dispatchEvent(new CustomEvent('submit-score-request', { detail: { network: 'somnia' } }));
+}
+
+export function mountFrostGame(options: MountFrostGameOptions): () => void {
+  gameRoot = document.getElementById('game');
+  scoreEl = document.getElementById('score');
+  timerEl = document.getElementById('timer');
+  gameOverEl = document.getElementById('game-over');
+  resultTitle = document.getElementById('result-title');
+  finalScoreEl = document.getElementById('final-score');
+  timeSurvivedEl = document.getElementById('time-survived');
+  restartBtn = document.getElementById('restart') as HTMLButtonElement | null;
+  gameOverSubmitApeBtn = document.getElementById('gameover-submit-ape') as HTMLButtonElement | null;
+  gameOverSubmitSomniaBtn = document.getElementById('gameover-submit-somnia') as HTMLButtonElement | null;
+  pauseBtn = document.getElementById('pause-btn') as HTMLButtonElement | null;
+  backToStartBtn = document.getElementById('back-to-start-btn') as HTMLButtonElement | null;
+  startBtn = document.getElementById('start-btn') as HTMLButtonElement | null;
+  pbScoreEl = document.getElementById('pb-score');
+  playfieldBgEl = document.getElementById('playfield-bg');
+
+  bgMusic = document.getElementById('bg-music') as HTMLAudioElement | null;
+  musicToggleGame = document.getElementById('music-toggle-game') as HTMLButtonElement | null;
+
+  if (!gameRoot) {
+    throw new Error('mountFrostGame: #game not found');
+  }
+
+  refreshPlayfieldMetrics();
+  const onResize = () => refreshPlayfieldMetrics();
+  const onVisibilityChange = () => {
+    if (document.visibilityState !== 'visible') return;
+    if (gameActive && !isPaused) lastFrameTime = null;
+  };
+  window.addEventListener('resize', onResize);
+  window.addEventListener('visibilitychange', onVisibilityChange);
+  gameRoot.addEventListener('click', onGameClick);
+
+  const onStartClick = () => {
+    options.onLeaveStartScreen();
+    startGame();
+  };
+  const onBackClick = () => onBackToStartClick(options);
+  startBtn?.addEventListener('click', onStartClick);
+
+  pauseBtn?.addEventListener('click', onPauseClick);
+  backToStartBtn?.addEventListener('click', onBackClick);
+  document.getElementById('resume-btn')?.addEventListener('click', onResumeClick);
+  restartBtn?.addEventListener('click', onRestartClick);
+  gameOverSubmitApeBtn?.addEventListener('click', onSubmitApe);
+  gameOverSubmitSomniaBtn?.addEventListener('click', onSubmitSomnia);
+
+  if (musicToggleGame) musicToggleGame.addEventListener('click', toggleMusic);
+  updateMusicButtons();
+
+  void updatePersonalBest();
+
+  return () => {
+    gameRoot?.removeEventListener('click', onGameClick);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('visibilitychange', onVisibilityChange);
+    startBtn?.removeEventListener('click', onStartClick);
+    pauseBtn?.removeEventListener('click', onPauseClick);
+    backToStartBtn?.removeEventListener('click', onBackClick);
+    document.getElementById('resume-btn')?.removeEventListener('click', onResumeClick);
+    restartBtn?.removeEventListener('click', onRestartClick);
+    gameOverSubmitApeBtn?.removeEventListener('click', onSubmitApe);
+    gameOverSubmitSomniaBtn?.removeEventListener('click', onSubmitSomnia);
+    musicToggleGame?.removeEventListener('click', toggleMusic);
+
+    if (personalBestDebounce) {
+      clearTimeout(personalBestDebounce);
+      personalBestDebounce = null;
+    }
+
+    if (timerInterval) clearInterval(timerInterval);
+    if (freezeCountdownInterval) clearInterval(freezeCountdownInterval);
+    if (gameLoopId !== null) cancelAnimationFrame(gameLoopId);
+    timerInterval = null;
+    freezeCountdownInterval = null;
+    gameLoopId = null;
+    gameActive = false;
+
+    gameRoot = null;
+    scoreEl = null;
+    timerEl = null;
+    gameOverEl = null;
+    resultTitle = null;
+    finalScoreEl = null;
+    timeSurvivedEl = null;
+    restartBtn = null;
+    gameOverSubmitApeBtn = null;
+    gameOverSubmitSomniaBtn = null;
+    pauseBtn = null;
+    backToStartBtn = null;
+    startBtn = null;
+    pbScoreEl = null;
+    playfieldBgEl = null;
+    bgMusic = null;
+    musicToggleGame = null;
+    objects = [];
+    objectPool = [];
+    flashPool = [];
+  };
+}
